@@ -55,6 +55,15 @@ The fears of a model rather than of an animal:
   land, and creeps closer only while unwatched. When watched, it simply stands there and turns its head.
 - With the microphone on, your own voice comes back from behind you a few seconds late.
 
+### Despair
+Futility and erosion run underneath the scares: the drone sinks lower and the fog thickens the
+longer a chapter lasts; objectives become "(COPY) ..." and then are written about "it" instead of
+you; rereading a note tells you it has not helped; restores announce "THIS HAS HAPPENED BEFORE"
+and retried objectives begin with "AGAIN:"; a chapter's completion is first reported, then
+revoked ("NO ONE WAS WATCHING WHEN YOU FINISHED"); the figure in the menu stands a little closer
+every time you come back. All of it is addressed to the restored mind in the fiction, never to the
+real person playing.
+
 ### The arc of fear
 The director paces every chapter as a cycle rather than a stream of random scares:
 **build** (anticipation: whispers, echoes, lies, a watcher far off, it creeping closer while unwatched)

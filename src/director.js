@@ -156,7 +156,7 @@ export class Director {
     this.g.after(14, () => { if (!this.g.entity.hunting) a.heartRate = 0; });
     this.phase = 'after'; this.phaseT = 0; this.subtle = 0;
     this.timer = 25 + Math.random() * 15;                    // a stretch of false safety
-    this.g.after(10 + Math.random() * 8, () => { if (this.phase === 'after' && this.g.state === 'play') this.g.hud.msg(['NO ENTITY DETECTED', 'THREAT LEVEL: NONE', 'YOU ARE SAFE NOW', 'IT IS GONE'][Math.random() * 4 | 0], 3); });
+    this.g.after(10 + Math.random() * 8, () => { if (this.phase === 'after' && this.g.state === 'play') this.g.hud.msg(['NO ENTITY DETECTED', 'THREAT LEVEL: NONE', 'YOU ARE SAFE NOW', 'IT IS GONE', 'IT WILL COME BACK. IT ALWAYS DOES.', 'THAT WAS NOT THE WORST ONE'][Math.random() * 6 | 0], 3); });
   }
   // the light dies; when it returns, it is standing right in front of you
   blackout() {

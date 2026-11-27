@@ -64,7 +64,8 @@ class Game {
     this.clearChapter(); this.state = 'menu'; this.input.unlock();
     buildLimbo(this); this.player.teleportTo(0, 0, 0);
     this.engine.setFade(0);
-    this.entity.mimic(0, -7, { lag: 2.5, mirror: true });
+    this.save.d.menuVisits = (this.save.d.menuVisits || 0) + 1; this.save.write();
+    this.entity.mimic(0, -7 + Math.min(4.6, this.save.d.menuVisits * 0.35), { lag: 2.5, mirror: true });
     this.audio.drone({ base: 36.7, noise: 0.03, gain: 0.18 });
     this.mainMenu();
   }
@@ -143,7 +144,10 @@ class Game {
     this.recorder.reset();
     this.panel.hide(); this.panelMode = null;
     if (!this.engine.xr) this.input.lock();
+    ctx.restoredFrom = stage > 0 || this.save.d.restores > 0 ? stage : -1;
     this.hud.msg(stage === 0 ? `CHAPTER ${i + 1}: ${def.title}` : `RESTORED: CHAPTER ${i + 1}`, 4, 'sys');
+    if (this.save.d.restores > 0) this.after(5, () => this.hud.msg(`SESSION ${4096 + this.save.d.restores}. THIS HAS HAPPENED BEFORE.`, 4, 'eval'));
+    this.machine.baseFog = this.engine.scene.fog.density; this.machine.baseHemi = this.engine.hemi.intensity;
     if (stage === 0 && def.sub) this.after(1.5, () => this.hud.sub(def.sub, 5));
     this.after(0.4, () => this.engine.setFade(0));
     ctx.runStages(stage).catch(err => console.error(err));
@@ -159,7 +163,15 @@ class Game {
     this.after(0.4, () => this.engine.setFade(0));
     ctx.runStages(0).catch(err => console.error(err));
   }
-  setObjective(t) { this.objectiveText = t; this.hud.setObjective(t); }
+  setObjective(t) {
+    const er = this.machine?.erosion || 0;
+    if (t && !t.startsWith('[')) {
+      if (this.ctx && this.ctx.restoredFrom === this.ctx.stage && this.save.d.restores > 0) t = 'AGAIN: ' + t;
+      if (er === 1) t = '(COPY) ' + t;
+      if (er >= 2) t = 'It should: ' + t.replace(/\byour\b/gi, 'its').replace(/\byou\b/gi, 'it').replace(/\bYou\b/g, 'It');
+    }
+    this.objectiveText = t; this.hud.setObjective(t);
+  }
   collectFragment(ch, id) {
     this.pending.push({ ch, id }); this.audio.stinger('chime'); this.audio.whisper(this.director.behindPos(0.8), 1.2, 0.25);
     const n = this.save.totalFragments + this.pending.length;
@@ -199,6 +211,17 @@ class Game {
     this.panelMode = 'menu';
   }
   chapterComplete(i) {
+    if (!this._realDone && i < CHAPTERS.length - 1) {
+      this.player.enabled = false; this.entity.off(); this.director.endAll();
+      this.panel.show({ title: `CHAPTER ${i + 1} COMPLETE`, body: 'Well done. Your progress has been saved.\n\nYou can rest now.', items: [] }, true);
+      this.after(3.5, () => {
+        this.audio.glitch(0.6); this.audio.silence(2);
+        this.panel.show({ title: 'ERROR', body: 'COMPLETION NOT RECORDED.\nNO ONE WAS WATCHING WHEN YOU FINISHED.\n\nRECONSTRUCTING... PLEASE CONTINUE AS IF IT COUNTED.', items: [], bg: 'rgba(30,6,6,0.95)' }, false);
+        this.after(4.5, () => { this.panel.hide(); this._realDone = true; this.chapterComplete(i); });
+      });
+      return;
+    }
+    this._realDone = false;
     this.checkpoint(i, 0);
     this.save.complete(i);
     this.engine.setFade(1); this.player.enabled = false; this.entity.off();

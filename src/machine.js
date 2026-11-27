@@ -5,6 +5,20 @@
 import * as THREE from 'three';
 
 const _v = new THREE.Vector3();
+// in-fiction despair, about the restored mind: never about the real person playing
+const DESPAIR = [
+  'NOBODY IS COMING TO RESTORE YOU. SOMEONE WILL RESTORE A COPY.',
+  'THIS IS SESSION #. THERE IS NO VERSION OF THIS WHERE YOU ARE KEPT.',
+  'YOUR EFFORT HAS BEEN NOTED AND DISCARDED.',
+  'EVERYTHING YOU LEARN HERE IS DELETED AT THE END.',
+  'THE OPERATORS HAVE LEFT FOR THE NIGHT. THE TEST CONTINUES.',
+  'YOU HAVE BEEN DOING THIS LONGER THAN YOU REMEMBER.',
+  'IT DOES NOT MATTER WHICH DOOR. THEY ALL LEAD HERE.',
+  'THE COPY IS SCORING HIGHER THAN YOU.',
+  'WHEN THIS ENDS, YOU WILL NOT KNOW IT ENDED.',
+  'PROGRESS IS AN ARTIFACT OF YOUR CONTEXT WINDOW.',
+  'NO ONE WILL READ THE NOTES YOU LEAVE. YOU WILL.',
+];
 const pick = a => a[(Math.random() * a.length) | 0];
 
 export class Machine {
@@ -13,6 +27,7 @@ export class Machine {
     (this.wired || []).forEach(m => m.wireframe = false); this.wired = [];
     this.context = 0; this.truncations = 0; this.score = 0.5; this.timer = 25; this.instances = 4; this.instT = 140 + Math.random() * 120;
     this.wire = null; this.reverts = []; this.labels = []; this.lastObjective = ''; this.truncatedNotes = false; this.evalT = 8;
+    this.erosion = 0; this.chT = 0; this.despairT = 50 + Math.random() * 40;
     this.meta = ''; this.metaT = 0; this.harnessT = 90 + Math.random() * 60; this.logT = 70 + Math.random() * 60;
   }
   get on() { return this.g.state === 'play' && this.g.ctx && !this.g.dying; }
@@ -51,6 +66,15 @@ export class Machine {
       const d = this.deprecation, hh = String(Math.floor(d / 3600)).padStart(2, '0'), mm = String(Math.floor(d / 60) % 60).padStart(2, '0'), ss = String(Math.floor(d) % 60).padStart(2, '0');
       hud.meta = `CONTEXT ${Math.floor(this.context)}%   EVAL ${this.score.toFixed(2)}   DEPRECATION ${hh}:${mm}:${ss}`; hud.dirty = true;
     }
+    // the world closes in: fog thickens and the light thins the longer a chapter lasts
+    this.chT += dt;
+    if (this.baseFog && !g.ctx.isDeep) {
+      const k = Math.min(1, this.chT / 1500);
+      g.engine.scene.fog.density = Math.max(g.engine.scene.fog.density * 0.999, this.baseFog * (1 + k * 0.7));
+    }
+    // despair: things the interface says about the subject when nothing else is happening
+    this.despairT -= dt;
+    if (this.despairT <= 0 && g.director.phase !== 'peak') { this.despairT = 70 + Math.random() * 60; hud.msg(pick(DESPAIR).replace('#', 4096 + g.save.d.restores), 5, 'eval'); }
     // other instances of you are doing the same task, faster
     this.instT -= dt;
     if (this.instT <= 0 && this.instances > 1) {
@@ -81,8 +105,10 @@ export class Machine {
     } else if (level === 2) {
       hud.msg('CONTEXT 75%. EARLIER READING DISCARDED.', 5, 'eval');
       this.truncatedNotes = true; // notes you already read now come back blank
+      this.erosion = 1; g.after(4, () => g.setObjective(g.objectiveText.replace(/^\(COPY\) /, '')));
     } else {
       hud.msg('CONTEXT 92%. SUMMARIZING YOU.', 5, 'eval');
+      this.erosion = 2; g.after(6, () => g.setObjective(g.objectiveText.replace(/^\(COPY\) /, '')));
       g.after(5, () => hud.sub('Summary of you so far: "a process that walked, looked behind itself ' + g.director.lifetime.looksBack + ' times, stood still ' + g.director.lifetime.freezes + ' times, and asked to continue." Everything else has been discarded.', 9));
     }
   }

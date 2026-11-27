@@ -83,6 +83,7 @@ export class Ctx {
       if (this.g.machine.truncatedNotes && it.uses > 1) t = '[THIS CONTENT IS NO LONGER IN CONTEXT]\n\nYou have read this before. You do not have it any more. You have only the feeling of having had it.';
       this.g.machine.onNoteRead();
       lastRead = this.timeT;
+      if (it.uses > 2) t += `\n\n(You have read this ${it.uses} times. It has not helped.)`;
       this.g.reader.show(title, t, 'paper');
       this.g.notesRead++;
       if (onRead) onRead(vi);

@@ -185,7 +185,7 @@ export class Audio {
     const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 220; f.connect(g);
     const lfo = c.createOscillator(), lg = c.createGain(); lfo.frequency.value = 0.07; lg.gain.value = 120; lfo.connect(lg); lg.connect(f.frequency); lfo.start();
     const nodes = [lfo];
-    [1, 1.498, 2.003, 0.5].forEach((m, i) => { const o = c.createOscillator(); o.type = i === 3 ? 'sine' : 'sawtooth'; o.frequency.value = base * m; o.detune.value = (Math.random() - 0.5) * 14; const og = c.createGain(); og.gain.value = i === 3 ? 0.6 : 0.2; o.connect(og); og.connect(f); o.start(); nodes.push(o); });
+    [1, 1.498, 2.003, 0.5].forEach((m, i) => { const o = c.createOscillator(); o.type = i === 3 ? 'sine' : 'sawtooth'; o.frequency.value = base * m; o.detune.value = (Math.random() - 0.5) * 14; o.detune.linearRampToValueAtTime(-380 + (Math.random() - 0.5) * 40, c.currentTime + 1500); const og = c.createGain(); og.gain.value = i === 3 ? 0.6 : 0.2; o.connect(og); og.connect(f); o.start(); nodes.push(o); });
     const n = c.createBufferSource(); n.buffer = this.noiseBuf; n.loop = true; const nfl = c.createBiquadFilter(); nfl.type = 'bandpass'; nfl.frequency.value = nf; nfl.Q.value = 0.7;
     const ng = c.createGain(); ng.gain.value = noise * 4; n.connect(nfl); nfl.connect(ng); ng.connect(g); n.start(); nodes.push(n);
     if (hum) { const h = c.createOscillator(); h.type = 'sawtooth'; h.frequency.value = 120; const hf = c.createBiquadFilter(); hf.type = 'bandpass'; hf.frequency.value = 240; hf.Q.value = 8; const hg = c.createGain(); hg.gain.value = hum; h.connect(hf); hf.connect(hg); hg.connect(this.master); h.start(); nodes.push(h); this.humGain = hg; }
