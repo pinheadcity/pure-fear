@@ -56,7 +56,7 @@ class Game {
     this.engine.clearWorld(); this.unobserved.clear(); this.entity.off(); this.director.reset();
     this.timers.length = 0; this.player.floorCheck = null; this.player.enabled = true; this.flashAllowed = true; this.flashDim = 1;
     this.panel.hide(); this.modal = null; this.reader.hide(); this.hud.lieBattery = null; this.hud.extra = ''; this.player.inventory.clear();
-    this.entity.fig.mat.color.set(0xd6d2c8); this.entity.footsteps = true; this.entity.onCaught = null;
+    this.entity.fig.mat.color.set(0xd6d2c8); this.entity.fig.mat.emissive.set(0x1a1a18); this.entity.footsteps = true; this.entity.onCaught = null;
     this.audio.stopDrone(); this.audio.heartRate = 0; this.audio.setReverb(0.35);
   }
   toMenu() {
