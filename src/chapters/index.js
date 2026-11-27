@@ -2,8 +2,11 @@
 import * as THREE from 'three';
 import { mat } from '../textures.js';
 import ch1 from './ch1_office.js';
+import ch2 from './ch2_servers.js';
+import ch3 from './ch3_house.js';
+import ch4 from './ch4_hospital.js';
 
-export const CHAPTERS = [ch1];
+export const CHAPTERS = [ch1, ch2, ch3, ch4];
 export const DEEP = null;
 
 export function buildLimbo(game) {

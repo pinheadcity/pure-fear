@@ -108,6 +108,14 @@ export class Figure {
   }
 }
 
+// mirror a sampled pose across a plane x=c or z=c (in place)
+export function reflectPose(P, axis, c) {
+  if (axis === 'x') { P[1] = 2 * c - P[1]; P[7] = 2 * c - P[7]; P[10] = 2 * c - P[10]; P[4] = -P[4]; P[6] = -P[6]; }
+  else { P[3] = 2 * c - P[3]; P[9] = 2 * c - P[9]; P[12] = 2 * c - P[12]; P[4] = Math.PI - P[4]; P[6] = -P[6]; }
+  for (let j = 0; j < 3; j++) { const t = P[7 + j]; P[7 + j] = P[10 + j]; P[10 + j] = t; }
+  return P;
+}
+
 // The entity controller
 export class Completion {
   constructor(game) {
@@ -127,7 +135,7 @@ export class Completion {
   reflect(axis, c, { lag = 0 } = {}) { this.mode = 'reflect'; this.mirror = { axis, c }; this.lag = lag; this.fig.visible = true; this.hunting = false; }
   // walks the player's own path, `delay` seconds behind them
   hunt({ delay = 12, aggression = 0.15, freezeWhenSeen = true, predict = 0, minDelay = 1.0 } = {}) {
-    this.mode = 'hunt'; this.delay = Math.min(delay, Math.max(2, this.rec.span - 1)); this.aggression = aggression; this.freezeWhenSeen = freezeWhenSeen;
+    this.mode = 'hunt'; this.startDelay = delay; this.delay = delay; this.aggression = aggression; this.freezeWhenSeen = freezeWhenSeen;
     this.predict = predict; this.minDelay = minDelay; this.fig.visible = true; this.hunting = true; this.vanishOnLook = 0; this.huntT = 0;
   }
   // free movement toward player's predicted position
@@ -148,11 +156,7 @@ export class Completion {
       if (!rec.sample(this.lag, P)) return;
       const h = g.engine.headPos(_a);
       if (this.mode === 'reflect') {
-        const { axis, c } = this.mirror;
-        if (axis === 'x') { P[1] = 2 * c - P[1]; P[7] = 2 * c - P[7]; P[10] = 2 * c - P[10]; P[4] = -P[4]; P[6] = -P[6]; }
-        else { P[3] = 2 * c - P[3]; P[9] = 2 * c - P[9]; P[12] = 2 * c - P[12]; P[4] = Math.PI - P[4]; P[6] = -P[6]; }
-        // swap hands so the reflection is a true mirror
-        for (let j = 0; j < 3; j++) { const t = P[7 + j]; P[7 + j] = P[10 + j]; P[10 + j] = t; }
+        reflectPose(P, this.mirror.axis, this.mirror.c);
       } else {
         // express pose in player's yaw frame, then rebuild around anchor facing the player
         const yaw = P[4], cy = Math.cos(-yaw), sy = Math.sin(-yaw), hx = P[1], hz = P[3];
@@ -167,6 +171,8 @@ export class Completion {
       this.fig.pose(P, dt); return;
     }
     if (this.mode === 'hunt') {
+      if (rec.span < this.startDelay + 0.5) { this.fig.visible = false; return; }
+      this.fig.visible = true;
       // its clock stops while you watch it (if allowed); noise and aggression close the gap
       const noise = g.player.noise, seen = this.freezeWhenSeen && this.observed;
       const rate = seen ? 0 : 1 + this.aggression + noise * 0.9 + g.director.huntBoost;
