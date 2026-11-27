@@ -235,6 +235,18 @@ export class Audio {
     this.micSrc.connect(d); d.connect(hp); hp.connect(f); f.connect(g); g.connect(dest);
     setTimeout(() => { try { this.micSrc.disconnect(d); } catch (e) { } }, (delay + dur + 1) * 1000);
   }
+  // recorded CC0 sample, optionally spatialized. name may be an array (random pick).
+  play(name, pos, { vol = 1, rate = 1, loop = false, offset = 0, dur, ref = 1.2, jitter = 0.08, dry = false } = {}) {
+    if (!this.ctx || !this.sampleFn) return null;
+    if (Array.isArray(name)) name = name[(Math.random() * name.length) | 0];
+    const buf = this.sampleFn(name); if (!buf) return null;
+    const c = this.ctx, s = c.createBufferSource(), g = c.createGain();
+    s.buffer = buf; s.loop = loop; s.playbackRate.value = rate * (1 + (Math.random() - 0.5) * jitter);
+    g.gain.value = vol; s.connect(g); g.connect(pos ? this._dest(pos, ref) : (dry ? this.master : this.dry));
+    s.start(this.t, offset, dur); const h = { src: s, gain: g, stop: (f = 0.3) => { g.gain.setTargetAtTime(0, this.t, f / 3); try { s.stop(this.t + f); } catch (e) { } } };
+    return h;
+  }
+  ambience(name, vol = 0.5) { if (this.ambH) this.ambH.stop(2); this.ambH = name ? this.play(name, null, { vol, loop: true, jitter: 0, dry: true }) : null; }
   silence(sec = 3) {
     if (!this.ctx) return; const g = this.master.gain, at = this.t;
     g.cancelScheduledValues(at); g.setValueAtTime(g.value, at); g.linearRampToValueAtTime(0.0001, at + 0.04);

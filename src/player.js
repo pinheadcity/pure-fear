@@ -9,7 +9,7 @@ export class Player {
     this.noise = 0; this.moveSpeed = 0; this.stepAcc = 0; this.surface = 'hard';
     this.snapCooldown = 0; this.lastHead = new THREE.Vector3(); this.headVel = new THREE.Vector3();
     this.inventory = new Set(); this.held = null;
-    this.enabled = true; this.batteryDrain = 1 / 6; this.fallY = 0; this.falling = 0;
+    this.enabled = true; this.batteryDrain = 1 / 12; this.fallY = 0; this.falling = 0;
     this.floorCheck = null; // fn(x,z) -> bool, if set, leaving floor = fall
     // teleport arc
     this.tpMarker = new THREE.Mesh(new THREE.RingGeometry(0.15, 0.22, 24).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x88aacc, fog: false }));
@@ -65,7 +65,7 @@ export class Player {
     // collision on the head position (also blocks room-scale walking into walls)
     e.rig.updateMatrixWorld(true);
     const hp = e.headPos(_h);
-    const res = e.colliders.resolve(hp.x, hp.z, 0.22);
+    const res = this.g.hidden ? { x: hp.x, z: hp.z } : e.colliders.resolve(hp.x, hp.z, 0.22);
     e.rig.position.x += res.x - hp.x; e.rig.position.z += res.z - hp.z;
     e.rig.updateMatrixWorld(true);
     // falling when off the floor (void chapters)
@@ -89,7 +89,9 @@ export class Player {
       for (const fn of this.stepListeners) fn(vol);
     }
     // noise: movement + mic
-    const movNoise = Math.min(1, this.moveSpeed / 3.5) * (st.crouch ? 0.4 : 1) * (st.run ? 1.6 : 1);
+    const physH = e.xr ? e.headPos(_h).y - e.rig.position.y : (st.crouch ? 1.05 : 1.65);
+    this.crouched = st.crouch || physH < (this.g.settings.seated ? 0.75 : 1.15);
+    const movNoise = Math.min(1, this.moveSpeed / 3.5) * (this.crouched ? 0.35 : 1) * (st.run ? 1.6 : 1);
     const mic = this.g.audio.micOn ? this.g.audio.micLevel : 0;
     const n = Math.min(1, Math.max(movNoise * (this.g.audio.micOn ? 0.6 : 1), mic * 1.2));
     this.noise += (n - this.noise) * Math.min(1, dt * 3);

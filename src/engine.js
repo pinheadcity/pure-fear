@@ -126,7 +126,7 @@ export class Builder {
     this._push(material, g);
     if (o.collide) {
       if (o.ry) { const c = Math.abs(Math.cos(o.ry)), s = Math.abs(Math.sin(o.ry)); const hw = (w * c + d * s) / 2, hd = (w * s + d * c) / 2; this.engine.colliders.add(x - hw, z - hd, x + hw, z + hd); }
-      else this.engine.colliders.add(x - w / 2, z - d / 2, x + w / 2, z + d / 2);
+      else this.engine.colliders.add(x - w / 2, z - d / 2, x + w / 2, z + d / 2, o.low ? 'low' : undefined);
     }
     return g;
   }
