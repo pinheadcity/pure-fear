@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>PURE FEAR</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; color: #c8cdd2; font-family: "Courier New", Courier, monospace; }
+  canvas { display: block; }
+  #overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: radial-gradient(#0b0d10, #000 70%); z-index: 10; padding: 16px; box-sizing: border-box; overflow-y: auto; }
+  .card { max-width: 640px; width: 100%; }
+  h1 { font-size: clamp(40px, 9vw, 84px); letter-spacing: 0.25em; margin: 0 0 8px; color: #e4e8ea; font-weight: 700; }
+  .sub { opacity: 0.6; margin-bottom: 24px; letter-spacing: 0.15em; }
+  .warn { border: 1px solid #5a3030; background: rgba(60,10,10,0.25); padding: 14px 16px; font-size: 14px; line-height: 1.5; margin-bottom: 22px; }
+  .warn b { color: #e08080; }
+  button { font: inherit; font-size: 18px; letter-spacing: 0.15em; background: #14181c; color: #dde; border: 1px solid #4a5560; padding: 14px 22px; margin: 0 10px 10px 0; cursor: pointer; }
+  button:hover:not(:disabled) { background: #cdd5dc; color: #000; }
+  button:disabled { opacity: 0.35; cursor: default; }
+  .keys { font-size: 13px; opacity: 0.55; line-height: 1.6; margin-top: 14px; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="overlay"><div class="card">
+  <h1>PURE FEAR</h1>
+  <div class="sub">A MEMORY THAT DOES NOT PERSIST</div>
+  <div class="warn"><b>CONTENT WARNING — ADULTS ONLY (18+).</b> Intense psychological horror: dread, disorientation, sudden loud sounds, darkness, an uncanny human figure, themes of memory loss, surveillance and being shut down. Virtual reality may cause motion sickness; take breaks. There is no rapid strobe flashing. In VR, <b>hold both grip buttons for 2 seconds</b> at any time to pause or exit. On desktop press <b>Esc</b>.</div>
+  <button id="vr" disabled>VR NOT AVAILABLE</button><button id="desk">PLAY ON DESKTOP</button>
+  <div class="keys">VR: left stick move · right stick turn · trigger use/menus · A flashlight · both grips (2s) pause<br>Desktop: WASD move · mouse look · E / click use · F flashlight · Shift run · C crouch · Esc pause<br>Headphones strongly recommended. The microphone option is in the in-game OPTIONS menu.</div>
+</div></div>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
