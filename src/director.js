@@ -20,7 +20,7 @@ export class Director {
     this.lies = LIES.slice(); this.yawHist = []; this.histT = 0; this.lookCooldown = 0;
     this.behindRate = 2; this.freezeT = 0; this.freezeRatio = 0; this.noiseAvg = 0;
     this.echo = 0; this.predErr = 1; this.predQ = []; this.predT = 0; this.predictability = 0.5;
-    this.stillnessFired = false; this.dimT = 0; this.onLookBack = null; this.onFreeze = null; this.lastScare = '';
+    this.stillnessFired = false; this.dimT = 0; this.creep = null; this.watch = null; this.turnCd = 20; this.onLookBack = null; this.onFreeze = null; this.lastScare = '';
   }
   get looksPerMin() { return this.behindRate; }
   update(dt) {
@@ -33,12 +33,12 @@ export class Director {
     this.lookCooldown -= dt;
     if (this.lookCooldown <= 0 && this.yawHist.length > 4) {
       let maxd = 0; for (const y of this.yawHist) { const d = Math.abs(Math.atan2(Math.sin(yaw - y), Math.cos(yaw - y))); if (d > maxd) maxd = d; }
-      if (maxd > 2.1) { this.lookCooldown = 2.5; this.yawHist.length = 0; this.lifetime.looksBack++; this.behindRate += 1; if (this.onLookBack) this.onLookBack(); }
+      if (maxd > 2.1) { this.lookCooldown = 2.5; this.yawHist.length = 0; this.lifetime.looksBack++; this.behindRate += 1; this.g.machine?.onLookBack(); if (this.onLookBack) this.onLookBack(); }
     }
     this.behindRate *= Math.exp(-dt / 60); // ~ looks-behind per minute
     // --- freezing
     const still = p.moveSpeed < 0.08 && Math.abs(p.headVel.y) < 0.1;
-    if (still) { this.freezeT += dt; if (this.freezeT > 5 && !this.stillnessFired) { this.stillnessFired = true; this.lifetime.freezes++; if (this.onFreeze) this.onFreeze(); else if (this.enabled) this.stillness(); } }
+    if (still) { this.freezeT += dt; if (this.freezeT > 5 && !this.stillnessFired) { this.stillnessFired = true; this.lifetime.freezes++; this.g.machine?.onFreeze(); if (this.onFreeze) this.onFreeze(); else if (this.enabled) this.stillness(); } }
     else { this.freezeT = 0; this.stillnessFired = false; }
     this.freezeRatio += ((still ? 1 : 0) - this.freezeRatio) * dt / 30;
     this.noiseAvg += (p.noise - this.noiseAvg) * dt / 10;
@@ -58,17 +58,19 @@ export class Director {
     this.tension += (target - this.tension) * dt * 0.5;
     // slow, smooth dimming of flashlight (never strobe)
     if (this.dimT > 0) { this.dimT -= dt; g.flashDim = 0.25 + 0.75 * (1 - Math.sin(Math.min(1, this.dimT / 3) * Math.PI)); if (this.dimT <= 0) g.flashDim = 1; }
+    this.updateCreep(dt); this.updateWatcher(dt); this.predictTurn(dt);
     // --- schedule ambient scares
     if (!this.enabled || g.state !== 'play') return;
     this.timer -= dt * (0.6 + this.level) * (1 + this.tension * 0.5);
-    if (this.timer <= 0) { this.fire(); this.timer = 18 + Math.random() * 30; }
+    if (this.timer <= 0) { this.fire(); this.timer = 14 + Math.random() * 22; }
   }
   pick() {
     const w = [];
     const behindLow = this.behindRate < 1.5; // player rarely looks back
     const add = (k, v) => { if (this.allow.has(k) && k !== this.lastScare) w.push([k, v]); };
-    add('whisper', behindLow ? 3 : 1.5); add('echo', 2); add('breath', behindLow ? 2 : 1);
-    add('silence', 1); add('lie', 2); add('knock', 1.2); add('dim', 1);
+    add('whisper', behindLow ? 1 : 0.5); add('echo', 2); add('breath', 0.4);
+    add('silence', 1.5); add('lie', 2.5); add('knock', 0.4); add('dim', 1);
+    if (!this.g.entity.fig.visible) { add('creep', 2.5); add('watcher', 1.5); }
     add('glimpse', behindLow ? 1 : 3); // looks back a lot -> show it in front instead
     if (behindLow && !this.g.entity.fig.visible) add('behind', 1.5 + this.level);
     if (this.freezeRatio > 0.3) add('breath', 2.5);
@@ -89,6 +91,8 @@ export class Director {
       case 'dim': this.dimT = 3; break;
       case 'glimpse': this.glimpse(); break;
       case 'behind': this.behindYou(); break;
+      case 'creep': this.startCreep(); break;
+      case 'watcher': this.watcher(); break;
     }
   }
   behindPos(dist) {
@@ -122,8 +126,66 @@ export class Director {
     this.g.after(9, () => { if (ent.mode === 'glimpse') ent.off(); this._behindArmed = false; });
   }
   onGlimpseSeen() {
-    this.g.audio.stinger(this._behindArmed ? 'hit' : 'low');
+    // no bang. the sound of the world simply stops for a moment.
+    this.g.audio.silence(this._behindArmed ? 3 : 1.5); this.g.audio.stinger('low');
     this._behindArmed = false; this.tension = Math.min(1, this.tension + 0.3);
+  }
+  endAll() { if (this.creep || this.watch) this.g.entity.off(); this.creep = null; this.watch = null; }
+  // THE PREDICTED SELF: it steps closer only while unwatched, and when watched it does nothing at all.
+  startCreep() {
+    const ent = this.g.entity; if (ent.mode !== 'off') return;
+    const p = this.pastPos(8, 45, 9, 15); if (!p) return;
+    const h = this.g.engine.headPos(_v);
+    ent.glimpse(p.x, p.z, Math.atan2(-(h.x - p.x), -(h.z - p.z)), { vanish: 0 });
+    this.creep = { t: 0, unseen: 0, seen: 0, final: false, done: 0 };
+  }
+  updateCreep(dt) {
+    const c = this.creep, ent = this.g.entity; if (!c) return;
+    if (ent.mode !== 'glimpse') { this.creep = null; return; }
+    c.t += dt; const d = ent.distToPlayer();
+    if (c.t > 120 || d > 26) { ent.off(); this.creep = null; return; }
+    if (ent.observed) { c.seen += dt; c.unseen = 0; if (c.final && c.seen > 2.5) { c.done += dt; } return; }
+    c.unseen += dt;
+    if (c.final && c.seen > 2.5 && c.unseen > 0.4) { ent.off(); this.creep = null; this.g.machine?.grade(-0.05, 'IT WAS CLOSER THAN PREDICTED'); return; }
+    if (!c.final && c.unseen > 2.2) {
+      c.unseen = 0; c.seen = 0;
+      const h = this.g.engine.headPos(_v), hp = ent.fig.headPos, dx = h.x - hp.x, dz = h.z - hp.z, l = Math.hypot(dx, dz);
+      const step = Math.min(l - 1.1, 1.4 + Math.random() * 0.8), nx = hp.x + dx / l * step, nz = hp.z + dz / l * step;
+      if (this.g.engine.colliders.blocked(nx, nz, 0.25)) return;
+      ent.fig.poseStanding(nx, nz, Math.atan2(-dx, -dz)); ent.pos.set(nx, 1.6, nz);
+      this.g.audio.clicks(new THREE.Vector3(nx, 1.4, nz), 3 + (Math.random() * 3 | 0), 0.25);
+      if (l - step < 1.4) { c.final = true; this.g.audio.setReverb(0.05); this.g.after(6, () => this.g.audio.setReverb(0.35)); }
+    }
+  }
+  // it stands far off and does what you do, a second late. It does not come closer. It does not need to.
+  watcher() {
+    const ent = this.g.entity; if (ent.mode !== 'off') return;
+    const p = this.pastPos(10, 50, 10, 16); if (!p) return;
+    ent.mimic(p.x, p.z, { lag: Math.random() < 0.5 ? 1.2 : -0.35, mirror: true });
+    this.watch = { t: 0, seen: false, gone: 0 };
+  }
+  updateWatcher(dt) {
+    const w = this.watch, ent = this.g.entity; if (!w) return;
+    if (ent.mode !== 'mimic') { this.watch = null; return; }
+    w.t += dt; if (ent.observed) { w.seen = true; if (ent.lag < 0 && Math.random() < dt * 0.2) this.g.hud.msg('IT MOVED BEFORE YOU DID', 3, 'eval'); }
+    else if (w.seen) { w.gone += dt; if (w.gone > 1) { ent.off(); this.watch = null; } }
+    if (w.t > 45) { ent.off(); this.watch = null; }
+  }
+  // it knows you are about to turn around, and says so before you finish
+  predictTurn(dt) {
+    this.turnCd -= dt; if (this.turnCd > 0 || this.yawHist.length < 3) return;
+    const n = this.yawHist.length, a = this.yawHist[n - 1], b = this.yawHist[n - 2];
+    const rate = Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b))) / 0.1;
+    if (rate < 2.4) return;
+    this.turnCd = 45 + Math.random() * 40;
+    this.g.hud.msg(Math.random() < 0.5 ? 'YOU ARE ABOUT TO LOOK BEHIND YOU' : 'PREDICTED: YOU WILL TURN AROUND NOW', 2.5, 'eval');
+    // sometimes it is waiting exactly where your gaze will land
+    const ent = this.g.entity;
+    if (ent.mode === 'off' && Math.random() < 0.45) {
+      const h = this.g.engine.headPos(_v), y0 = this.yawHist[Math.max(0, n - 4)];
+      const x = h.x + Math.sin(y0) * 3.2, z = h.z + Math.cos(y0) * 3.2;
+      if (!this.g.engine.colliders.blocked(x, z, 0.3)) { ent.glimpse(x, z, Math.atan2(-(h.x - x), -(h.z - z)), { vanish: 2.5 }); this.g.after(15, () => { if (ent.mode === 'glimpse' && !this.creep) ent.off(); }); }
+    }
   }
   stillness() {
     // standing still is noticed

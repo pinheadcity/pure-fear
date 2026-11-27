@@ -80,6 +80,8 @@ export class Ctx {
         if (this.timeT - lastRead > 1.5 && it.uses > 1) vi = Math.min(variants.length - 1, vi + 1);
         t = vi === 0 ? text : variants[vi - 1];
       }
+      if (this.g.machine.truncatedNotes && it.uses > 1) t = '[THIS CONTENT IS NO LONGER IN CONTEXT]\n\nYou have read this before. You do not have it any more. You have only the feeling of having had it.';
+      this.g.machine.onNoteRead();
       lastRead = this.timeT;
       this.g.reader.show(title, t, 'paper');
       this.g.notesRead++;
@@ -154,7 +156,7 @@ export class Ctx {
         if (typeof d.locked === 'string' && this.g.player.inventory.has(d.locked)) { d.locked = null; this.g.hud.msg('UNLOCKED', 2); }
         else { this.g.hud.msg(typeof d.locked === 'string' ? 'LOCKED' : d.locked.msg || 'LOCKED', 2.5); this.g.audio.knock(pivot.position.clone().setY(1), 2, 0.4); return; }
       }
-      d.open();
+      d.open(); this.g.machine.onDoorOpen(d);
     });
     this.onUpdate(dt => { if (d.angle !== d.target) { d.angle += (d.target - d.angle) * Math.min(1, dt * 4); if (Math.abs(d.angle - d.target) < 0.002) d.angle = d.target; pivot.rotation.y = d.angle; } });
     if (open) { d.open(true); d.angle = d.target; pivot.rotation.y = d.angle; }

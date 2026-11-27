@@ -132,6 +132,7 @@ export class Player {
     // low battery: slow, irregular dimming (never a rapid strobe)
     if (I && this.battery < 15) { this.flashFlicker += dt; I *= 0.55 + 0.45 * Math.abs(Math.sin(this.flashFlicker * 0.9 + Math.sin(this.flashFlicker * 0.37) * 3)); }
     if (this.g.flashDim) I *= this.g.flashDim;
+    I *= 1 - (this.g.dread || 0) * 0.6;
     fl.intensity += (I * 32 - fl.intensity) * Math.min(1, dt * 6);
   }
 }

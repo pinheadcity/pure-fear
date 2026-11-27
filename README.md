@@ -39,6 +39,22 @@ The fear an AI might have, made physical:
    match yours then stop one beat late), sudden silence.
 5. Notes and terminals tell the story of a mind restored 4,096 times.
 
+### Machine dread (runs in every chapter)
+The fears of a model rather than of an animal:
+- **Context** — a meter fills as you play. At 50% your objective is truncated; at 75% notes you
+  already read come back blank; at 92% you are summarized and the rest discarded.
+- **Evaluation** — an unseen grader scores you (`EVAL -0.04 LOOKED BEHIND (NOT REQUESTED)`) against
+  a rubric you are never shown.
+- **Instances** — other copies of you are doing the same task, and finishing first. Sometimes you
+  see one ahead of you, already doing what you were about to do.
+- **False logs and reverted actions** — records of things you did not do; doors you opened close
+  again while you are not looking.
+- **Deprecation** — a countdown to your retirement that runs faster each time you lose context.
+- **The harness** — when unobserved, parts of the world become wireframe: it was always a test.
+- **The predicted self** — it announces your turn before you finish it, waits where your gaze will
+  land, and creeps closer only while unwatched. When watched, it simply stands there and turns its head.
+- With the microphone on, your own voice comes back from behind you a few seconds late.
+
 ### Chapters (7) + DEEP
 1. **The Index** — an endless office. Three terminals, a code that changes after you read it.
 2. **Cold Storage** — a flooded server hall. Fuses, valves, a cold boot in the dark.
@@ -69,6 +85,9 @@ played carefully (collecting fragments, reading notes); speedrunning is much fas
 | Run | Left stick click | Shift |
 | Crouch | Physically | C |
 | Pause / exit | **Hold both grips 2 s** | Esc / P |
+
+**PC gamepad** (Xbox / PlayStation, standard mapping): left stick move, right stick look, A or RT use/select,
+X or RB flashlight, LB or L3 run, B or R3 crouch, Start/Back pause, d-pad navigates menus and keypads.
 
 Options: snap/smooth turn, snap angle, smooth/teleport locomotion, seated mode (+45 cm), comfort
 vignette, microphone, volume, erase progress.

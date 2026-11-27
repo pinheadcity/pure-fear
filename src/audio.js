@@ -7,7 +7,14 @@ export class Audio {
     this.out = ctx.createGain(); this.out.gain.value = this.volume;
     this.comp = ctx.createDynamicsCompressor(); this.comp.threshold.value = -16; this.comp.ratio.value = 6;
     this.master = ctx.createGain(); // used for "sudden silence"
-    this.master.connect(this.comp); this.comp.connect(this.out); this.out.connect(ctx.destination);
+    this.lp = ctx.createBiquadFilter(); this.lp.type = 'lowpass'; this.lp.frequency.value = 20000; this.lp.Q.value = 0.5;
+    this.master.connect(this.lp); this.lp.connect(this.comp); this.comp.connect(this.out); this.out.connect(ctx.destination);
+    // tinnitus: rises as it gets close
+    this.tin = ctx.createOscillator(); this.tin.frequency.value = 6100; this.tinG = ctx.createGain(); this.tinG.gain.value = 0;
+    this.tin.connect(this.tinG); this.tinG.connect(this.out); this.tin.start();
+    // sub-audible pressure: a slow 19 Hz throb that swells with dread
+    this.sub = ctx.createOscillator(); this.sub.frequency.value = 19; this.subG = ctx.createGain(); this.subG.gain.value = 0;
+    this.sub.connect(this.subG); this.subG.connect(this.comp); this.sub.start();
     // reverb send
     this.verb = ctx.createConvolver(); this.verb.buffer = this._impulse(2.8, 2.2);
     this.verbIn = ctx.createGain(); this.verbIn.gain.value = 0.35;
@@ -191,6 +198,43 @@ export class Audio {
     this.droneNodes = null;
   }
   setHum(v) { if (this.humGain) this.humGain.gain.setTargetAtTime(v, this.t, 0.1); }
+  // dread 0..1: the world muffles, the ears ring, the air thickens
+  setDread(v) {
+    if (!this.ctx) return; const t = this.t;
+    this.lp.frequency.setTargetAtTime(18000 * Math.pow(0.03, v), t, 0.4);
+    this.tinG.gain.setTargetAtTime(v > 0.25 ? (v - 0.25) * 0.02 : 0, t, 0.8);
+    this.subG.gain.setTargetAtTime(v * 0.35, t, 1.0);
+  }
+  // dry little clicks, like joints settling somewhere close
+  clicks(pos, n = 4, vol = 0.35) {
+    if (!this.ctx) return; const c = this.ctx, dest = this._dest(pos, 0.6); let at = this.t;
+    for (let i = 0; i < n; i++) {
+      const s = this._noise(0.05, at), f = c.createBiquadFilter(), g = c.createGain(); f.type = 'bandpass'; f.frequency.value = 1800 + Math.random() * 2500; f.Q.value = 9;
+      s.connect(f); f.connect(g); g.connect(dest); this._env(g, at, 0.001, vol * (0.5 + Math.random() * 0.5), 0.004, 0.02);
+      at += 0.04 + Math.random() * (Math.random() < 0.3 ? 0.4 : 0.09);
+    }
+  }
+  // a long, distant, wordless voice from somewhere in the building
+  distantVoice(pos, vol = 0.12) {
+    if (!this.ctx) return; const c = this.ctx, at = this.t, dest = this._dest(pos, 4);
+    const o = c.createOscillator(), f1 = c.createBiquadFilter(), f2 = c.createBiquadFilter(), g = c.createGain(); o.type = 'sawtooth';
+    const base = 140 + Math.random() * 60; o.frequency.setValueAtTime(base, at); o.frequency.linearRampToValueAtTime(base * 0.93, at + 4); o.frequency.linearRampToValueAtTime(base * 0.8, at + 6);
+    f1.type = 'bandpass'; f1.frequency.setValueAtTime(700, at); f1.frequency.linearRampToValueAtTime(400, at + 6); f1.Q.value = 6;
+    f2.type = 'lowpass'; f2.frequency.value = 1200;
+    o.connect(f1); f1.connect(f2); f2.connect(g); g.connect(dest);
+    g.gain.setValueAtTime(0.0001, at); g.gain.linearRampToValueAtTime(vol, at + 2); g.gain.linearRampToValueAtTime(vol * 0.7, at + 4.5); g.gain.linearRampToValueAtTime(0.0001, at + 6.5);
+    o.start(at); o.stop(at + 7);
+  }
+  // your own microphone, delayed and dulled, played back from behind you
+  micEcho(pos, delay = 2.2, dur = 7) {
+    if (!this.ctx || !this.micSrc) return; const c = this.ctx, at = this.t;
+    const d = c.createDelay(5); d.delayTime.value = delay; const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 1600;
+    const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 200;
+    const g = c.createGain(); g.gain.setValueAtTime(0, at); g.gain.linearRampToValueAtTime(1.6, at + delay + 0.5); g.gain.setValueAtTime(1.6, at + delay + dur - 1); g.gain.linearRampToValueAtTime(0, at + delay + dur);
+    const dest = this._dest(pos, 0.5);
+    this.micSrc.connect(d); d.connect(hp); hp.connect(f); f.connect(g); g.connect(dest);
+    setTimeout(() => { try { this.micSrc.disconnect(d); } catch (e) { } }, (delay + dur + 1) * 1000);
+  }
   silence(sec = 3) {
     if (!this.ctx) return; const g = this.master.gain, at = this.t;
     g.cancelScheduledValues(at); g.setValueAtTime(g.value, at); g.linearRampToValueAtTime(0.0001, at + 0.04);
@@ -213,7 +257,7 @@ export class Audio {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
       const src = this.ctx.createMediaStreamSource(stream);
       this.analyser = this.ctx.createAnalyser(); this.analyser.fftSize = 1024; this.micData = new Float32Array(1024);
-      src.connect(this.analyser); this.micStream = stream; this.micOn = true; return true;
+      src.connect(this.analyser); this.micSrc = src; this.micStream = stream; this.micOn = true; return true;
     } catch (e) { this.micOn = false; return false; }
   }
   disableMic() { if (this.micStream) this.micStream.getTracks().forEach(t => t.stop()); this.micOn = false; this.micLevel = 0; }

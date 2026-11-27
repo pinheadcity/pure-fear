@@ -30,7 +30,7 @@ export class Input {
     this.vhand.left.position.set(-0.22, -0.35, -0.35); this.vhand.right.position.set(0.22, -0.33, -0.38);
     engine.camera.add(this.vhand.left, this.vhand.right);
 
-    addEventListener('keydown', e => { this.keys.add(e.code); if (['Space', 'ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault(); });
+    addEventListener('keydown', e => { this.padActive = false; this.keys.add(e.code); if (['Space', 'ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault(); });
     addEventListener('keyup', e => this.keys.delete(e.code));
     const cv = r.domElement;
     addEventListener('mousemove', e => { if (this.locked) { this.mouse.dx += e.movementX; this.mouse.dy += e.movementY; } this.mouse.x = e.clientX / innerWidth * 2 - 1; this.mouse.y = -(e.clientY / innerHeight) * 2 + 1; });
@@ -97,6 +97,27 @@ export class Input {
       s.run = k.has('ShiftLeft') || k.has('ShiftRight'); s.crouch = k.has('KeyC') || k.has('ControlLeft');
       s.pause = k.has('Escape') || k.has('KeyP') || k.has('Tab');
       this.mouse.clicked = false;
+      // --- gamepad (standard mapping: Xbox / PlayStation / most PC pads)
+      this.nav = { up: false, down: false, left: false, right: false, ok: false };
+      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+      for (const gp of pads) {
+        if (!gp || !gp.connected) continue;
+        const dz = v => Math.abs(v) > 0.18 ? v : 0, b = i => !!(gp.buttons[i] && gp.buttons[i].pressed);
+        s.mx = Math.max(-1, Math.min(1, s.mx + dz(gp.axes[0] || 0)));
+        s.my = Math.max(-1, Math.min(1, s.my - dz(gp.axes[1] || 0)));
+        const lx = dz(gp.axes[2] || 0), ly = dz(gp.axes[3] || 0);
+        this.yaw -= lx * Math.abs(lx) * dt * 3.0; this.pitch = Math.max(-1.45, Math.min(1.45, this.pitch - ly * Math.abs(ly) * dt * 2.2));
+        if (b(0) || b(7)) s.use = true;            // A / RT: use
+        if (b(2) || b(5)) s.flash = true;          // X / RB: flashlight
+        if (b(10) || b(4)) s.run = true;           // L3 / LB: run
+        if (b(1) || b(11)) s.crouch = true;        // B / R3: crouch
+        if (b(9) || b(8)) s.pause = true;          // Start / Back: pause
+        this.nav.up ||= b(12) || (gp.axes[1] || 0) < -0.6; this.nav.down ||= b(13) || (gp.axes[1] || 0) > 0.6;
+        this.nav.left ||= b(14) || (gp.axes[0] || 0) < -0.6; this.nav.right ||= b(15) || (gp.axes[0] || 0) > 0.6;
+        this.nav.ok ||= b(0) || b(7);
+        if (gp.buttons.some(x => x.pressed) || gp.axes.some(v => Math.abs(v) > 0.3)) this.padActive = true;
+        if (this.nav.up || this.nav.down || this.nav.left || this.nav.right) this.padNavT = performance.now();
+      }
       // mouse look
       if (this.locked) {
         this.yaw -= this.mouse.dx * 0.0022; this.pitch -= this.mouse.dy * 0.0022;

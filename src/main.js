@@ -7,6 +7,7 @@ import { Player } from './player.js';
 import { HUD, Panel, Reader, Vignette } from './ui.js';
 import { Recorder, Completion, Unobserved } from './entity.js';
 import { Director } from './director.js';
+import { Machine } from './machine.js';
 import { Save } from './save.js';
 import { Ctx } from './chapters/context.js';
 import { CHAPTERS, DEEP, buildLimbo } from './chapters/index.js';
@@ -23,7 +24,7 @@ class Game {
     this.player = new Player(this);
     this.hud = new HUD(this); this.panel = new Panel(this); this.reader = new Reader(this); this.vignette = new Vignette(this);
     this.recorder = new Recorder(this); this.unobserved = new Unobserved(this);
-    this.director = new Director(this); this.entity = new Completion(this);
+    this.director = new Director(this); this.entity = new Completion(this); this.machine = new Machine(this);
     this.player.stepListeners.push(v => this.director.onStep(v));
     this.state = 'title'; this.ctx = null; this.timers = []; this.pending = []; this.flashAllowed = true; this.flashDim = 1;
     this.notesRead = 0; this.raycaster = new THREE.Raycaster(); this.panelMode = null; this.dying = false;
@@ -54,10 +55,10 @@ class Game {
   clearChapter() {
     if (this.ctx) this.ctx.dispose(); this.ctx = null;
     this.engine.clearWorld(); this.unobserved.clear(); this.entity.off(); this.director.reset();
-    this.timers.length = 0; this.player.floorCheck = null; this.player.enabled = true; this.flashAllowed = true; this.flashDim = 1;
+    this.timers.length = 0; this.machine.reset(); this.player.floorCheck = null; this.player.enabled = true; this.flashAllowed = true; this.flashDim = 1;
     this.panel.hide(); this.modal = null; this.reader.hide(); this.hud.lieBattery = null; this.hud.extra = ''; this.player.inventory.clear();
     this.entity.fig.mat.color.set(0xd6d2c8); this.entity.fig.mat.emissive.set(0x1a1a18); this.entity.footsteps = true; this.entity.onCaught = null;
-    this.audio.stopDrone(); this.audio.heartRate = 0; this.audio.setReverb(0.35);
+    this.audio.stopDrone(); this.audio.heartRate = 0; this.dread = 0; this.audio.setDread(0); this.director.endAll && this.director.endAll(); this.audio.setReverb(0.35);
   }
   toMenu() {
     this.clearChapter(); this.state = 'menu'; this.input.unlock();
@@ -230,6 +231,9 @@ class Game {
       this.entity.update(dt);
       this.unobserved.update(dt);
       this.director.update(dt);
+      if (!this.ctx?.def?.noMachine) this.machine.update(dt);
+      { const ent = this.entity; let d = ent.fig.visible ? ent.distToPlayer() : 99; if (this.director.touchOn) d = Math.min(d, 0.6);
+        const target = Math.max(0, Math.min(1, 1 - (d - 0.8) / 8)); this.dread = (this.dread || 0) + (target - (this.dread || 0)) * Math.min(1, dt * 0.8); this.audio.setDread(this.dread); }
       if (!this.panel.open && !this.reader.open) this.interactions(inp); else this.hud.setPrompt('');
       if (this.panel.open) this.panel.update(inp);
       this.reader.update(dt, inp);
@@ -258,7 +262,7 @@ class Game {
     for (const h of hits) { const c = h.object.userData.inter; if (c && c.enabled && h.distance <= c.range) { it = c; this._rayDist = h.distance; break; } }
     this._rayHit = !!it;
     const key = this.engine.xr ? 'TRIGGER' : 'E';
-    this.hud.setPrompt(it ? `[${key}] ${it.label}` : '');
+    this.hud.setPrompt(it ? `[${this.input.padActive && !this.engine.xr ? 'A' : key}] ${it.label}` : '');
     this.hud.reticle = true;
     if (it && (inp.pressed('use') || inp.pressed('useL'))) { it.uses++; it.fn(); }
   }

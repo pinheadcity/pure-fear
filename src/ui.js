@@ -62,7 +62,8 @@ export class Panel {
     let best = -1, hitPt = null;
     const sides = this.g.engine.xr ? ['right', 'left'] : ['right'];
     let clickSide = null;
-    for (const s of sides) {
+    const padNav = !this.g.engine.xr && performance.now() - (input.padNavT || -1e9) < 4000;
+    for (const s of padNav ? [] : sides) {
       if (this.g.engine.xr && !input.hands[s]) continue;
       input.ray(s, true, this.ray);
       const h = this.ray.intersectObject(this.mesh, false)[0];
@@ -88,6 +89,14 @@ export class Panel {
       if (k.has('ArrowUp') && !this._ku) { this.hover = Math.max(0, this.hover - 1); this.render(); }
       if (k.has('Enter') && !this._ke && this.hover >= 0) { const it = this.items[this.hover]; if (!it.disabled && it.fn) { it.fn(); if (this.open) this.render(); } }
       this._kd = k.has('ArrowDown'); this._ku = k.has('ArrowUp'); this._ke = k.has('Enter');
+      // gamepad: d-pad / left stick moves, A selects
+      const n = input.nav || {}, cols = this.def?.cols || 1, p = this._pn || {}, N = this.items.length;
+      const move = d => { let i = this.hover < 0 ? 0 : this.hover + d; i = Math.max(0, Math.min(N - 1, i)); this.hover = i; this.render(); };
+      if (N && n.down && !p.down) move(cols); if (N && n.up && !p.up) move(-cols);
+      if (N && n.right && !p.right) move(1); if (N && n.left && !p.left) move(-1);
+      if (n.ok && !p.ok && this.hover >= 0 && this.open) { const it = this.items[this.hover]; if (it && !it.disabled && it.fn) { this.g.audio.beep(1200, 0.03, 0.06); it.fn(); if (this.open) this.render(); } }
+      this._pn = { ...n };
+      if (!this.open) return false;
     }
     return false;
   }
@@ -119,13 +128,13 @@ export class HUD {
   render() {
     this.dirty = false; const g = this.ctx, W = 1024; g.clearRect(0, 0, W, 512);
     g.textAlign = 'center';
-    let y = 60;
+    let y = 72;
     for (const m of this.msgs) {
       const a = Math.min(1, m.t, m.age * 3);
       g.font = `bold 30px ${FONT}`;
       let txt = m.text;
       if (m.style === 'glitch') txt = txt.split('').map(ch => Math.random() < 0.08 ? String.fromCharCode(33 + Math.random() * 60) : ch).join('');
-      const col = m.style === 'warn' ? `rgba(220,90,80,${a})` : m.style === 'mem' ? `rgba(150,220,230,${a})` : `rgba(190,205,215,${a})`;
+      const col = m.style === 'eval' ? `rgba(230,170,70,${a})` : m.style === 'warn' ? `rgba(220,90,80,${a})` : m.style === 'mem' ? `rgba(150,220,230,${a})` : `rgba(190,205,215,${a})`;
       g.fillStyle = `rgba(0,0,0,${0.55 * a})`; const w = g.measureText(txt).width; g.fillRect(W / 2 - w / 2 - 14, y - 32, w + 28, 44);
       g.fillStyle = col; g.fillText(txt, W / 2, y); y += 52;
     }
@@ -142,6 +151,7 @@ export class HUD {
       g.fillText('PWR ' + String(Math.ceil(shown)).padStart(3, ' ') + '%', 40, 490);
       g.strokeStyle = 'rgba(160,170,175,0.5)'; g.strokeRect(170, 474, 120, 18); g.fillRect(172, 476, 116 * shown / 100, 14);
     }
+    if (this.meta && this.g.state === 'play') { g.textAlign = 'left'; g.font = `18px ${FONT}`; g.fillStyle = 'rgba(230,170,70,0.45)'; g.fillText(this.meta, 40, 24); }
     if (this.extra) { g.textAlign = 'right'; g.font = `20px ${FONT}`; g.fillStyle = 'rgba(160,170,175,0.6)'; g.fillText(this.extra, 984, 490); }
     this.tex.needsUpdate = true;
   }
@@ -187,7 +197,7 @@ export class Vignette {
   }
   update(dt, amount) {
     const on = this.g.settings.vignette && this.g.engine.xr;
-    const target = on ? Math.min(0.85, amount) : 0;
+    const target = Math.max(on ? Math.min(0.85, amount) : 0, (this.g.dread || 0) * 0.95);
     this.v += (target - this.v) * Math.min(1, dt * 5); this.mesh.material.opacity = this.v; this.mesh.visible = this.v > 0.01;
   }
 }

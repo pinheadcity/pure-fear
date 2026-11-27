@@ -128,7 +128,7 @@ export class Completion {
   }
   off() { this.mode = 'off'; this.fig.visible = false; this.hunting = false; this.g.audio.heartRate = 0; this.fig.wrongness = 0; this.fig.scale = 1; }
   // stands somewhere, frozen in a pose (optionally vanishing once looked at)
-  glimpse(x, z, yaw, { vanish = 0.6, h = 1.62 } = {}) { this.mode = 'glimpse'; this.fig.visible = true; this.fig.poseStanding(x, z, yaw, h); this.pos.set(x, h, z); this.vanishOnLook = vanish; this.seenT = 0; this.hunting = false; }
+  glimpse(x, z, yaw, { vanish = 0.6, h = 1.62 } = {}) { this.watchT = 0; this.mode = 'glimpse'; this.fig.visible = true; this.fig.poseStanding(x, z, yaw, h); this.pos.set(x, h, z); this.vanishOnLook = vanish; this.seenT = 0; this.hunting = false; }
   // copies player's body language at an anchor point, facing them, with a lag (negative lag = predicts)
   mimic(x, z, { lag = 1.5, mirror = true, faceYaw = null } = {}) { this.mode = 'mimic'; this.anchor.set(x, 0, z); this.lag = lag; this.mirrored = mirror; this.faceYaw = faceYaw; this.fig.visible = true; this.hunting = false; this.vanishOnLook = 0; }
   // real mirror: reflect player across a plane (normal along axis 'x' or 'z' at coordinate c)
@@ -149,6 +149,14 @@ export class Completion {
     if (this.mode === 'off') return;
     this.observed = this.fig.visible && uo.isObserved(this.fig.headPos, 50, 0.4);
     if (this.mode === 'glimpse') {
+      if (this.observed) {
+        // it notices you: the head turns toward you, slowly, and tilts
+        this.watchT = (this.watchT || 0) + dt;
+        const h = g.engine.headPos(_a), hp = this.fig.headPos;
+        const want = Math.atan2(-(h.x - hp.x), -(h.z - hp.z)); let dy = want - this.fig.head.rotation.y; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+        this.fig.head.rotation.y += dy * Math.min(1, dt * 0.35);
+        this.fig.head.rotation.z += (Math.min(0.45, this.watchT * 0.08) - this.fig.head.rotation.z) * dt * 0.5;
+      }
       if (this.observed) { this.seenT += dt; if (this.vanishOnLook && this.seenT > this.vanishOnLook) { this.off(); g.director.onGlimpseSeen(); } }
       return;
     }
