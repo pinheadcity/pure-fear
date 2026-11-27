@@ -14,6 +14,8 @@ export class Ctx {
     this.flags = {}; this.waiters = []; this.updaters = []; this.inter = []; this.fragCount = 0; this.alive = true;
     this.timeT = 0; this.stage = 0; this.spawnPoint = [0, 0, 0];
   }
+  get director() { return this.g.director; }
+  get entity() { return this.g.entity; }
   // ---------- static geometry ----------
   box(x, y, z, w, h, d, m, o) { return this.b.box(x, y, z, w, h, d, m, o); }
   wallX(x0, x1, z, { h = 3, m, gaps = [], t = 0.15, lintel = true } = {}) {
