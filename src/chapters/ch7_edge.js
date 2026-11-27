@@ -16,7 +16,8 @@ function chunk(c, name, z0, z1, x0, x1, build) {
   const cols = c.e.colliders.list.slice(n0);
   const region = Object.assign([x0, z1, x1, z0], { on: true });
   const ch = { name, grp, meshes, cols, region, z0, z1, gone: false };
-  ch.dissolve = () => { if (ch.gone) return; ch.gone = true; grp.visible = false; region.on = false; cols.forEach(b => b.on = false); c.g.audio.glitch(0.3, new THREE.Vector3(0, 1, (z0 + z1) / 2)); };
+  ch.dissolve = () => { if (ch.gone) return; ch.gone = true; grp.visible = false; region.on = false; cols.forEach(b => b.on = false); c.e.colliders.add(x0, z1 - 0.3, x1, z1 - 0.05); // an invisible edge: you cannot step back into what was forgotten
+    c.g.audio.glitch(0.3, new THREE.Vector3(0, 1, (z0 + z1) / 2)); };
   return ch;
 }
 

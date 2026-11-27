@@ -186,7 +186,7 @@ class Game {
     this.after(3.2, () => {
       this.dying = false;
       if (this.ctx?.isDeep) { this.deepOver(); return; }
-      this.loadChapter(this.ctx.index, this.ctx.stage); this.engine.setFade(1, 0x000000);
+      this.engine.fadeMesh.material.color.set(0); this.loadChapter(this.ctx.index, this.ctx.stage);
     });
   }
   deepOver() {

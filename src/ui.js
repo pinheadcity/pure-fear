@@ -130,9 +130,9 @@ export class HUD {
       g.fillStyle = col; g.fillText(txt, W / 2, y); y += 52;
     }
     if (this.objT > 0 && this.objective) {
-      g.font = `26px ${FONT}`; g.fillStyle = `rgba(200,200,180,${Math.min(1, this.objT)})`; g.fillText('OBJECTIVE: ' + this.objective, W / 2, 250);
+      g.font = `24px ${FONT}`; g.fillStyle = `rgba(200,200,180,${Math.min(1, this.objT)})`; wrapText(g, 'OBJECTIVE: ' + this.objective, W / 2, 232, 760, 28);
     }
-    if (this.subtitle) { g.font = `italic 28px ${FONT}`; g.fillStyle = 'rgba(210,210,210,0.9)'; wrapText(g, this.subtitle, W / 2, 330, 900, 34); }
+    if (this.subtitle) { g.font = `italic 26px ${FONT}`; g.fillStyle = 'rgba(210,210,210,0.9)'; wrapText(g, this.subtitle, W / 2, 340, 760, 32); }
     if (this.prompt) { g.font = `bold 28px ${FONT}`; g.fillStyle = 'rgba(230,230,220,0.9)'; g.fillText(this.prompt, W / 2, 300); }
     if (this.reticle && !this.g.engine.xr) { g.fillStyle = 'rgba(255,255,255,0.5)'; g.fillRect(W / 2 - 2, 256 + 80 - 2, 4, 4); }
     // battery (top-left of lower area). May lie.
