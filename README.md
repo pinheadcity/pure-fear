@@ -55,6 +55,13 @@ The fears of a model rather than of an animal:
   land, and creeps closer only while unwatched. When watched, it simply stands there and turns its head.
 - With the microphone on, your own voice comes back from behind you a few seconds late.
 
+### The arc of fear
+The director paces every chapter as a cycle rather than a stream of random scares:
+**build** (anticipation: whispers, echoes, lies, a watcher far off, it creeping closer while unwatched)
+→ **peak** (a real startle: it is behind you at arm's length; the light dies and returns with it in
+front of you; your predicted turn lands you face to face) → **after** (ringing silence, your
+heartbeat, a message that you are safe now) → and it builds again.
+
 ### Chapters (7) + DEEP
 1. **The Index** — an endless office. Three terminals, a code that changes after you read it.
 2. **Cold Storage** — a flooded server hall. Fuses, valves, a cold boot in the dark.

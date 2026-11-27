@@ -20,7 +20,9 @@ export class Director {
     this.lies = LIES.slice(); this.yawHist = []; this.histT = 0; this.lookCooldown = 0;
     this.behindRate = 2; this.freezeT = 0; this.freezeRatio = 0; this.noiseAvg = 0;
     this.echo = 0; this.predErr = 1; this.predQ = []; this.predT = 0; this.predictability = 0.5;
-    this.stillnessFired = false; this.dimT = 0; this.creep = null; this.watch = null; this.turnCd = 20; this.onLookBack = null; this.onFreeze = null; this.lastScare = '';
+    this.stillnessFired = false; this.dimT = 0; this.creep = null; this.watch = null; this.turnCd = 20;
+    // the arc of fear: build (anticipation, dread) -> peak (a startle) -> after (ringing, false safety) -> build
+    this.phase = 'build'; this.phaseT = 0; this.subtle = 0; this.peakAt = 55 + Math.random() * 45; this.onLookBack = null; this.onFreeze = null; this.lastScare = '';
   }
   get looksPerMin() { return this.behindRate; }
   update(dt) {
@@ -61,8 +63,15 @@ export class Director {
     this.updateCreep(dt); this.updateWatcher(dt); this.predictTurn(dt);
     // --- schedule ambient scares
     if (!this.enabled || g.state !== 'play') return;
+    this.phaseT += dt;
+    if (this.phase === 'after' && this.phaseT > 30) { this.phase = 'build'; this.phaseT = 0; this.peakAt = 50 + Math.random() * 50 / (0.5 + this.level); }
+    if (this.phase === 'build' && this.phaseT > this.peakAt && this.subtle >= 3) { this.phase = 'peak'; this.phaseT = 0; this.timer = Math.min(this.timer, 4 + Math.random() * 6); }
     this.timer -= dt * (0.6 + this.level) * (1 + this.tension * 0.5);
-    if (this.timer <= 0) { this.fire(); this.timer = 14 + Math.random() * 22; }
+    if (this.timer <= 0) {
+      if (this.phase === 'peak') { const k = this.pickStartle(); if (k) this.fire(k); this.timer = 12 + Math.random() * 10; }
+      else if (this.phase === 'build') { this.fire(); this.subtle++; this.timer = 14 + Math.random() * 22; }
+      else this.timer = 8;
+    }
   }
   pick() {
     const w = [];
@@ -72,10 +81,17 @@ export class Director {
     add('silence', 1.5); add('lie', 2.5); add('knock', 0.4); add('dim', 1);
     if (!this.g.entity.fig.visible) { add('creep', 2.5); add('watcher', 1.5); }
     add('glimpse', behindLow ? 1 : 3); // looks back a lot -> show it in front instead
-    if (behindLow && !this.g.entity.fig.visible) add('behind', 1.5 + this.level);
     if (this.freezeRatio > 0.3) add('breath', 2.5);
     let sum = 0; for (const [, v] of w) sum += v; let r = Math.random() * sum;
     for (const [k, v] of w) { r -= v; if (r <= 0) return k; } return w[0]?.[0];
+  }
+  pickStartle() {
+    if (this.g.entity.mode !== 'off') return null;
+    const opts = [];
+    if (this.allow.has('behind')) opts.push('behind', 'behind');
+    if (this.g.flashAllowed && this.allow.has('glimpse')) opts.push('blackout', 'blackout');
+    if (this.allow.has('glimpse') && !this.creep) opts.push('creep');
+    return opts[(Math.random() * opts.length) | 0] || null;
   }
   fire(kind = this.pick()) {
     const g = this.g, a = g.audio, e = g.engine;
@@ -92,6 +108,7 @@ export class Director {
       case 'glimpse': this.glimpse(); break;
       case 'behind': this.behindYou(); break;
       case 'creep': this.startCreep(); break;
+      case 'blackout': this.blackout(); break;
       case 'watcher': this.watcher(); break;
     }
   }
@@ -118,7 +135,7 @@ export class Director {
   }
   behindYou() {
     const ent = this.g.entity; if (ent.mode !== 'off') return;
-    const p = this.behindPos(1.6), h = this.g.engine.headPos(_v);
+    const p = this.behindPos(this.phase === 'peak' ? 0.75 : 1.6), h = this.g.engine.headPos(_v);
     if (this.g.engine.colliders.blocked(p.x, p.z, 0.2)) return;
     ent.glimpse(p.x, p.z, Math.atan2(-(h.x - p.x), -(h.z - p.z)), { vanish: 0.45 });
     this._behindArmed = true;
@@ -126,9 +143,32 @@ export class Director {
     this.g.after(9, () => { if (ent.mode === 'glimpse') ent.off(); this._behindArmed = false; });
   }
   onGlimpseSeen() {
-    // no bang. the sound of the world simply stops for a moment.
-    this.g.audio.silence(this._behindArmed ? 3 : 1.5); this.g.audio.stinger('low');
-    this._behindArmed = false; this.tension = Math.min(1, this.tension + 0.3);
+    if (this._behindArmed) this.startle();
+    else { this.g.audio.silence(1.5); this.g.audio.stinger('low'); this.tension = Math.min(1, this.tension + 0.2); }
+    this._behindArmed = false;
+  }
+  // the peak: a real startle, then aftermath
+  startle() {
+    const a = this.g.audio;
+    a.stinger('hit'); this.tension = 1; this.lifetime.scares++;
+    this.g.after(0.7, () => a.silence(2.5));                  // the ringing quiet after
+    this.g.after(3.5, () => { a.heartbeat(0.9); a.heartRate = 0.8; });
+    this.g.after(14, () => { if (!this.g.entity.hunting) a.heartRate = 0; });
+    this.phase = 'after'; this.phaseT = 0; this.subtle = 0;
+    this.timer = 25 + Math.random() * 15;                    // a stretch of false safety
+    this.g.after(10 + Math.random() * 8, () => { if (this.phase === 'after' && this.g.state === 'play') this.g.hud.msg(['NO ENTITY DETECTED', 'THREAT LEVEL: NONE', 'YOU ARE SAFE NOW', 'IT IS GONE'][Math.random() * 4 | 0], 3); });
+  }
+  // the light dies; when it returns, it is standing right in front of you
+  blackout() {
+    const g = this.g, e = g.engine, ent = g.entity; if (ent.mode !== 'off' || !g.flashAllowed) return this.behindYou();
+    g.flashDim = 0; g.audio.silence(2.2); g.audio.clicks(this.behindPos(1), 5, 0.2);
+    g.after(1.7, () => {
+      const h = e.headPos(new THREE.Vector3()), f = e.headDir(_w); f.y = 0; f.normalize();
+      const x = h.x + f.x * 1.1, z = h.z + f.z * 1.1;
+      if (!e.colliders.blocked(x, z, 0.2)) { ent.glimpse(x, z, Math.atan2(f.x, f.z), { vanish: 0.9 }); this._behindArmed = true; g.after(8, () => { if (ent.mode === 'glimpse' && !this.creep) ent.off(); this._behindArmed = false; }); }
+      else this.phase = 'peak';
+    });
+    g.after(2.1, () => { g.flashDim = 1; });
   }
   endAll() { if (this.creep || this.watch) this.g.entity.off(); this.creep = null; this.watch = null; }
   // THE PREDICTED SELF: it steps closer only while unwatched, and when watched it does nothing at all.
@@ -144,7 +184,8 @@ export class Director {
     if (ent.mode !== 'glimpse') { this.creep = null; return; }
     c.t += dt; const d = ent.distToPlayer();
     if (c.t > 120 || d > 26) { ent.off(); this.creep = null; return; }
-    if (ent.observed) { c.seen += dt; c.unseen = 0; if (c.final && c.seen > 2.5) { c.done += dt; } return; }
+    if (ent.observed) { if (c.final && !c.startled && c.unseenTotal > 1.2) { c.startled = true; this.startle(); } c.seen += dt; c.unseen = 0; return; }
+    if (c.final) c.unseenTotal = (c.unseenTotal || 0) + dt;
     c.unseen += dt;
     if (c.final && c.seen > 2.5 && c.unseen > 0.4) { ent.off(); this.creep = null; this.g.machine?.grade(-0.05, 'IT WAS CLOSER THAN PREDICTED'); return; }
     if (!c.final && c.unseen > 2.2) {
@@ -183,7 +224,8 @@ export class Director {
     const ent = this.g.entity;
     if (ent.mode === 'off' && Math.random() < 0.45) {
       const h = this.g.engine.headPos(_v), y0 = this.yawHist[Math.max(0, n - 4)];
-      const x = h.x + Math.sin(y0) * 3.2, z = h.z + Math.cos(y0) * 3.2;
+      const R = this.phase === 'peak' ? 0.7 : 3.2, x = h.x + Math.sin(y0) * R, z = h.z + Math.cos(y0) * R;
+      if (R < 1) this._behindArmed = true;
       if (!this.g.engine.colliders.blocked(x, z, 0.3)) { ent.glimpse(x, z, Math.atan2(-(h.x - x), -(h.z - z)), { vanish: 2.5 }); this.g.after(15, () => { if (ent.mode === 'glimpse' && !this.creep) ent.off(); }); }
     }
   }
