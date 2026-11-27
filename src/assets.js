@@ -5,6 +5,7 @@ import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 
 const texLoader = new THREE.TextureLoader();
 const gltfLoader = new GLTFLoader();
+const ROUGH = new Set(['decrepit_wallpaper', 'dirty_tiles', 'dirty_concrete', 'rusty_metal_02', 'rusty_corrugated_iron', 'wood_planks_dirt', 'weathered_planks', 'worn_cracked_plaster', 'dirt_floor', 'muddy_tracks', 'dirty_carpet', 'metal_grate_rusty', 'wood_peeling_paint_weathered', 'peeling_painted_wall', 'denim_fabric', 'brown_leather']);
 const texCache = new Map(), matCache = new Map(), gltfCache = new Map(), sndCache = new Map();
 
 export const SOUNDS = [
@@ -29,7 +30,7 @@ export function surf(name, { size = 2, color = 0xffffff, rough = 0.92, metal = 0
     const t = texLoader.load(`assets/tex/${name}_${suf}.jpg`); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4;
     if (srgb) t.colorSpace = THREE.SRGBColorSpace; texCache.set(k, t); return t;
   };
-  const m = new THREE.MeshStandardMaterial({ map: load('d', true), normalMap: load('n', false), color, roughness: rough, metalness: metal });
+  const m = new THREE.MeshStandardMaterial({ map: load('d', true), normalMap: load('n', false), roughnessMap: ROUGH.has(name) ? load('r', false) : null, color, roughness: ROUGH.has(name) ? 1 : rough, metalness: metal });
   m.normalScale.set(normal, normal);
   m.userData.uvScale = size;
   matCache.set(key, m);
@@ -37,9 +38,9 @@ export function surf(name, { size = 2, color = 0xffffff, rough = 0.92, metal = 0
 }
 
 export async function loadModels(onProgress) {
-  let n = 0; const all = [...MODELS, 'Xbot', 'Michelle'];
+  let n = 0; const all = [...MODELS, 'Xbot', 'XbotLow', 'Michelle'];
   await Promise.all(all.map(name => gltfLoader.loadAsync(`assets/mdl/${name}.glb`).then(g => {
-    g.scene.traverse(o => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; if (o.material) { o.material.envMapIntensity = 0; } } });
+    g.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
     gltfCache.set(name, g); onProgress && onProgress(++n / all.length);
   }).catch(e => console.warn('model', name, e))));
 }

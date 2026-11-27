@@ -1,7 +1,7 @@
 // The compound: farmhouse, yard, kill floor, smokehouse, basement. Plus the scripting toolkit.
 import * as THREE from 'three';
 import { Builder, wallSegments } from './engine.js';
-import { surf, prop } from './assets.js';
+import { surf, prop, character } from './assets.js';
 import { textCanvas, canvasTex, wrapText } from './textures.js';
 import { Nav } from './hunter.js';
 
@@ -37,6 +37,33 @@ function decal(kind) {
   return decalTex[kind];
 }
 // plastic-wrapped body: a human silhouette under cloudy plastic
+let haloT = null;
+function haloTex() { if (haloT) return haloT; const { c, g } = textCanvas(64, 64); const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.2, 'rgba(255,220,170,0.5)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); haloT = canvasTex(c); return haloT; }
+// a real human shape, posed limp, baked once into a static mesh and wrapped in plastic; blood pools toward the head
+let baked = null;
+function bakedBody() {
+  if (baked) return baked;
+  const ch = character('XbotLow'); const a = ch.actions.sad_pose || ch.actions.idle; a.play(); ch.mixer.update(0.5); ch.root.updateMatrixWorld(true);
+  const parts = [], v = new THREE.Vector3();
+  ch.root.traverse(o => {
+    if (!o.isSkinnedMesh) return;
+    const src = o.geometry, pos = src.attributes.position, out = new Float32Array(pos.count * 3);
+    for (let i = 0; i < pos.count; i++) { v.fromBufferAttribute(pos, i); o.applyBoneTransform(i, v); v.applyMatrix4(o.matrixWorld); out.set([v.x, v.y, v.z], i * 3); }
+    const gg = new THREE.BufferGeometry(); gg.setAttribute('position', new THREE.BufferAttribute(out, 3)); if (src.index) gg.setIndex(src.index.clone()); parts.push(gg);
+  });
+  let geo = parts.length > 1 ? mergeGeo(parts) : parts[0];
+  geo.computeBoundingBox(); const bb = geo.boundingBox; geo.translate(-(bb.min.x + bb.max.x) / 2, -bb.min.y, -(bb.min.z + bb.max.z) / 2);
+  // a little bulk for the plastic, then normals
+  geo.computeVertexNormals(); const p = geo.attributes.position, n = geo.attributes.normal;
+  for (let i = 0; i < p.count; i++) p.setXYZ(i, p.getX(i) + n.getX(i) * 0.025, p.getY(i) + n.getY(i) * 0.02, p.getZ(i) + n.getZ(i) * 0.025);
+  geo.computeVertexNormals();
+  const cols = new Float32Array(p.count * 3), H = geo.boundingBox.max.y - geo.boundingBox.min.y || 1.8;
+  for (let i = 0; i < p.count; i++) { const y = p.getY(i) / H, noise = Math.sin(p.getX(i) * 13 + p.getZ(i) * 7) * Math.sin(p.getY(i) * 9) * 0.5 + 0.5; const blood = Math.min(1, Math.max(0, (0.92 - y) * 0 + (y > 0.8 ? (y - 0.8) * 4 : 0) + (noise > 0.82 ? 0.6 : 0))); cols.set([0.78 - blood * 0.5, 0.75 - blood * 0.72, 0.7 - blood * 0.68], i * 3); }
+  geo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
+  const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.18, metalness: 0, transparent: true, opacity: 0.94, envMapIntensity: 1.5 });
+  baked = [geo, m]; return baked;
+}
+function mergeGeo(list) { const pos = [], idx = []; let off = 0; for (const g of list) { const p = g.attributes.position.array; pos.push(...p); const ix = g.index ? g.index.array : [...Array(p.length / 3).keys()]; for (const i of ix) idx.push(i + off); off += p.length / 3; } const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); return g; }
 let bodyGeo = null, bodyMat = null;
 function wrappedBody() {
   if (!bodyGeo) {
@@ -66,11 +93,15 @@ export class Ctx {
     const { segs, gaps: gs } = wallSegments(Math.min(x0, x1), Math.max(x0, x1), gaps);
     for (const [a, b] of segs) this.b.box((a + b) / 2, 0, z, b - a, h, t, m, { collide: true });
     for (const g of gs) if (h > (g.h || 2.2)) this.b.box(g.at, g.h || 2.2, z, g.w, h - (g.h || 2.2), t, m);
+    if (this.trim && h >= 2.5) { const tm = this.trim; for (const [a, b] of segs) for (const sd of [-1, 1]) { this.b.box((a + b) / 2, 0, z + sd * (t / 2 + 0.015), b - a, 0.14, 0.03, tm); this.b.box((a + b) / 2, h - 0.1, z + sd * (t / 2 + 0.015), b - a, 0.1, 0.03, tm); }
+      for (const g of gs) { const gh = g.h || 2.2; for (const sx of [-1, 1]) this.b.box(g.at + sx * (g.w / 2 + 0.04), 0, z, 0.09, gh + 0.08, t + 0.07, tm); this.b.box(g.at, gh, z, g.w + 0.17, 0.1, t + 0.07, tm); } }
   }
   wallZ(z0, z1, x, { h = 3, m, gaps = [], t = 0.2 } = {}) {
     const { segs, gaps: gs } = wallSegments(Math.min(z0, z1), Math.max(z0, z1), gaps);
     for (const [a, b] of segs) this.b.box(x, 0, (a + b) / 2, t, h, b - a, m, { collide: true });
     for (const g of gs) if (h > (g.h || 2.2)) this.b.box(x, g.h || 2.2, g.at, t, h - (g.h || 2.2), g.w, m);
+    if (this.trim && h >= 2.5) { const tm = this.trim; for (const [a, b] of segs) for (const sd of [-1, 1]) { this.b.box(x + sd * (t / 2 + 0.015), 0, (a + b) / 2, 0.03, 0.14, b - a, tm); this.b.box(x + sd * (t / 2 + 0.015), h - 0.1, (a + b) / 2, 0.03, 0.1, b - a, tm); }
+      for (const g of gs) { const gh = g.h || 2.2; for (const sz of [-1, 1]) this.b.box(x, 0, g.at + sz * (g.w / 2 + 0.04), t + 0.07, gh + 0.08, 0.09, tm); this.b.box(x, gh, g.at, t + 0.07, 0.1, g.w + 0.17, tm); } }
   }
   floor(x0, z0, x1, z1, m, y = 0) { this.b.box((x0 + x1) / 2, y - 0.05, (z0 + z1) / 2, x1 - x0, 0.05, z1 - z0, m); }
   ceil(x0, z0, x1, z1, m, h) { this.b.box((x0 + x1) / 2, h, (z0 + z1) / 2, x1 - x0, 0.08, z1 - z0, m); }
@@ -92,18 +123,23 @@ export class Ctx {
     const p = this.e.points[i]; p.position.set(x, y, z); p.color.set(color); p.intensity = intensity; p.distance = dist;
     const b = this.mesh(new THREE.SphereGeometry(0.05, 8, 6), new THREE.MeshBasicMaterial({ color }), x, y, z);
     const cord = this.mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.8), new THREE.MeshBasicMaterial({ color: 0x111111 }), x, y + 0.45, z);
-    p.userData.bulb = b; p.userData.base = intensity; return p;
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTex(), color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.55 })); halo.scale.setScalar(0.9); b.add(halo);
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(1.4, 2.4, 20, 1, true).translate(0, -1.2, 0), new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, uniforms: { c: { value: new THREE.Color(color) }, u: { value: 1 } },
+      vertexShader: 'varying float vy; varying vec3 vn; varying vec3 vv; void main(){ vy = -position.y/2.4; vec4 mv = modelViewMatrix*vec4(position,1.0); vv = normalize(-mv.xyz); vn = normalize(normalMatrix*normal); gl_Position = projectionMatrix*mv; }',
+      fragmentShader: 'uniform vec3 c; uniform float u; varying float vy; varying vec3 vn; varying vec3 vv; void main(){ float a = u*0.045*(1.0-vy)*pow(abs(dot(vn,vv)),1.5); gl_FragColor = vec4(c*a, a); }' }));
+    cone.position.set(x, y - 0.02, z); cone.renderOrder = 9; this.world.add(cone);
+    p.userData.bulb = b; p.userData.base = intensity; p.userData.cone = cone; p.userData.halo = halo; return p;
   }
   // a body wrapped in plastic hanging from a hook (or lying)
   body(x, z, { hang = true, tag = null, ry = Math.random() * 6.28, y = 0.45 } = {}) {
-    const [geo, m] = wrappedBody();
-    const grp = new THREE.Group(); const me = new THREE.Mesh(geo, m); grp.add(me);
-    if (hang) { me.position.y = -1.85; grp.position.set(x, 2.95, z); this.e.colliders.add(x - 0.2, z - 0.2, x + 0.2, z + 0.2, 'low'); const chain = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.5), surf('rusty_metal_02', { size: 0.5, rough: 0.6, metal: 0.6 })); chain.position.y = -0.05; grp.add(chain); }
-    else { grp.position.set(x, 0.12, z); me.rotation.z = Math.PI / 2; me.position.x = -0.9; grp.rotation.y = ry; }
+    const [geo, m] = bakedBody();
+    const grp = new THREE.Group(); const me = new THREE.Mesh(geo, m); me.castShadow = true; me.userData.shared = true; grp.add(me);
+    if (hang) { me.rotation.z = Math.PI; me.position.y = -0.05; grp.position.set(x, 2.95, z); this.e.colliders.add(x - 0.2, z - 0.2, x + 0.2, z + 0.2, 'low'); const chain = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.5), surf('rusty_metal_02', { size: 0.5, rough: 0.6, metal: 0.6 })); chain.position.y = -0.05; grp.add(chain); }
+    else { grp.position.set(x, 0.18, z); me.rotation.z = Math.PI / 2; me.position.x = 0.9; grp.rotation.y = ry; }
     if (tag) {
       const { c, g } = textCanvas(128, 64); g.fillStyle = '#c8b890'; g.fillRect(0, 0, 128, 64); g.fillStyle = '#300'; g.font = 'bold 30px monospace'; g.textAlign = 'center'; g.fillText(tag, 64, 42);
       const tg = new THREE.Mesh(new THREE.PlaneGeometry(0.14, 0.07), new THREE.MeshStandardMaterial({ map: canvasTex(c), side: THREE.DoubleSide }));
-      tg.position.set(0, hang ? -1.95 : 0.15, hang ? 0.12 : 0); if (!hang) { tg.position.set(-1.7, 0.1, 0.12); } grp.add(tg);
+      tg.position.set(0, hang ? -0.35 : 0.15, hang ? 0.14 : 0); if (!hang) { tg.position.set(-1.7, 0.1, 0.12); } grp.add(tg);
     }
     grp.userData.sway = Math.random() * 6; grp.userData.hang = hang;
     this.world.add(grp); this.bodies.push(grp); return grp;
@@ -198,7 +234,7 @@ export class Ctx {
   }
   daylight(on) {
     const e = this.e;
-    if (on) { e.setAtmosphere({ fog: 0xe0dacc, density: 0.012, hemi: 2.6, hemiSky: 0xfff6e6, hemiGround: 0xa08a68, sun: 3.2 }); e.points[0].intensity = 0; e.points[1].intensity = 0; (this.windows || []).forEach(w => w.material.color.set(0xfff8e8)); }
+    if (on) { e.setAtmosphere({ fog: 0xcfc8b8, density: 0.02, hemi: 1.15, hemiSky: 0xf6ecd8, hemiGround: 0x6a5a44, sun: 1.6 }); e.points[0].intensity = 0; e.points[1].intensity = 0; e.scene.environmentIntensity = 0.9; (this.windows || []).forEach(w => w.material.color.set(0xfff8e8)); }
     else (this.windows || []).forEach(w => w.material.color.set(0x0a0c10));
   }
   choice(title, body, options) {
@@ -270,6 +306,7 @@ export function buildCompound(c, opt = {}) {
   const carpet = surf('dirty_carpet', { size: 2 }), tiles = surf('dirty_tiles', { size: 1.6, rough: 0.5 }), concrete = surf('dirty_concrete', { size: 3 });
   const corr = surf('rusty_corrugated_iron', { size: 2.5, rough: 0.7, metal: 0.3 }), planks = surf('weathered_planks', { size: 2.5 }), mud = surf('muddy_tracks', { size: 4 });
   const ceilM = surf('peeling_painted_wall', { size: 2.5 }), dirt = surf('dirt_floor', { size: 3 }), metal = surf('rusty_metal_02', { size: 1.5, rough: 0.6, metal: 0.5 }), grate = surf('metal_grate_rusty', { size: 1, rough: 0.6, metal: 0.5 });
+  c.trim = surf('wood_peeling_paint_weathered', { size: 1 });
   c.mats = { wallpaper, plaster, wood, carpet, tiles, concrete, corr, planks, mud, metal };
   // ===== HOUSE =====  x -12..12, z -10..10
   c.floor(-12, -10, -2, 0, tiles); c.floor(-2, -10, 12, 0, wood); c.floor(-12, 0, 12, 3, wood); c.floor(-12, 3, 0, 10, carpet); c.floor(0, 3, 12, 10, carpet);
@@ -305,9 +342,25 @@ export function buildCompound(c, opt = {}) {
   // hall details
   c.decal('print', -9, 0, 1.5, 0.35, { rot: Math.PI / 2 }); c.decal('print', -10, 0, 1.4, 0.35, { rot: Math.PI / 2 }); c.decal('hand', -11.88, 1.1, 2.2, 0.5, { wall: Math.PI / 2 });
   c.decal('drip', 11.88, 1.3, 2.4, 1.2, { wall: -Math.PI / 2 });
+  // clutter: a lived-in house
+  c.prop('vintage_oil_lamp', -3.7, 0.78, -8.7, 0.3); c.prop('wooden_stool_01', -5.6, 0, -9.2, 0.7, 1, [0.4, 0.4]); c.prop('metal_toolbox', -11.3, 0.9, -5.2, 1.5);
+  c.prop('old_gas_mask', -2.2, 1.55, -8.2, -Math.PI / 2); c.prop('cardboard_box_01', -10.9, 0, -9.3, 0.2, 1, [0.6, 0.5]); c.prop('cardboard_box_01', -10.6, 0.45, -9.25, 0.9);
+  c.prop('wooden_lantern_01', 11.3, 0, 2.6, 0); c.prop('propane_tank', -11.4, 0, 2.7, 0, 0.8);
+  c.prop('Television_01', 1.2, 0, 9.3, Math.PI, 1, [0.8, 0.6]); c.prop('cardboard_box_01', 4, 0, 9.4, 1.2, 1, [0.6, 0.5]); c.prop('wooden_crate_01', 10.6, 0, 3.8, 0.6, 1, [0.8, 0.8]);
+  c.prop('wooden_bucket_01', -1.2, 0, 9.4, 0); c.prop('vintage_oil_lamp', -3.3, 0.5, 7.6, 1);
+  // rugs, shelves, curtains
+  const rug = surf('dirty_carpet', { size: 1.2, color: 0x8a6a5a });
+  c.box(-6, 0.005, 6.5, 3, 0.01, 2, rug); c.box(6, 0.005, 6.5, 3.2, 0.01, 2.2, rug); c.box(5, 0.005, -5, 3.4, 0.01, 4.6, surf('dirty_carpet', { size: 1.4, color: 0x6a5048 }));
+  const shelf = surf('wood_planks_dirt', { size: 1 });
+  for (const [x, z, ry] of [[-11.8, -7, Math.PI / 2], [11.8, 8, -Math.PI / 2], [-6, -9.85, 0]]) for (const y of [1.3, 1.7]) c.box(x, y, z, Math.abs(Math.sin(ry)) > 0.5 ? 0.3 : 1.4, 0.04, Math.abs(Math.sin(ry)) > 0.5 ? 1.4 : 0.3, shelf);
+  for (const [x, y, z] of [[-11.75, 1.34, -7.4], [-11.75, 1.34, -6.8], [-11.72, 1.74, -7.2], [11.75, 1.34, 8.3], [11.72, 1.74, 7.7], [-6.4, 1.34, -9.8], [-5.7, 1.34, -9.8]]) c.mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.22, 10), new THREE.MeshStandardMaterial({ color: [0x3a2a10, 0x2a3a20, 0x5a4a30][Math.floor(Math.random() * 3)], roughness: 0.2, transparent: true, opacity: 0.85 }), x, y + 0.11, z);
+  c.windowPane(-6, 1.6, -9.88, 0, 1.2, 1.0); c.windowPane(8, 1.6, -9.88, 0, 1.2, 1.0); c.windowPane(-11.88, 1.6, 7, Math.PI / 2, 1.2, 1.0); c.windowPane(11.88, 1.6, 6.5, -Math.PI / 2, 1.2, 1.0);
+  const curtain = new THREE.MeshStandardMaterial({ color: 0x5a3a30, roughness: 0.95, side: THREE.DoubleSide });
+  for (const w of c.windows) for (const sx of [-1, 1]) { const g2 = new THREE.PlaneGeometry(0.45, 1.6, 8, 1); const pp = g2.attributes.position; for (let i = 0; i < pp.count; i++) pp.setZ(i, Math.sin(pp.getX(i) * 28) * 0.03); g2.computeVertexNormals(); const cm = new THREE.Mesh(g2, curtain); cm.position.set(sx * 0.62, -0.15, 0.04); w.add(cm); }
   // hiding places
   c.hide('pantry', -11.45, -8.8, -Math.PI / 2); c.hide('wardrobe', -11.45, 5.5, -Math.PI / 2); c.hide('living', 11.45, 6, Math.PI / 2); c.hide('diningCab', 11.45, -3, Math.PI / 2);
 
+  c.trim = null;
   // ===== YARD ===== x 12..46, z -24..24
   c.floor(12, -24, 46, 24, mud);
   const fence = planks;
@@ -323,8 +376,9 @@ export function buildCompound(c, opt = {}) {
   c.box(40, 0, 16, 2.4, 1.6, 4.6, surf('rusty_metal_02', { size: 2 }), { collide: true });
   // ===== BARN / KILL FLOOR ===== x 24..42, z -22..-4
   c.floor(24, -22, 42, -4, tiles); c.ceil(24, -22, 42, -4, corr, 3.6);
-  c.wallX(24, 42, -22, { h: 3.6, m: corr }); c.wallX(24, 42, -4, { h: 3.6, m: corr, gaps: [{ at: 33, w: 2.4, h: 2.6 }] });
-  c.wallZ(-22, -4, 24, { h: 3.6, m: corr }); c.wallZ(-22, -4, 42, { h: 3.6, m: corr });
+  c.wallX(24, 42, -22, { h: 3.6, m: planks }); c.wallX(24, 42, -4, { h: 3.6, m: planks, gaps: [{ at: 33, w: 2.4, h: 2.6 }] });
+  c.wallZ(-22, -4, 24, { h: 3.6, m: planks }); c.wallZ(-22, -4, 42, { h: 3.6, m: planks });
+  for (let x = 25; x < 42; x += 2.2) c.box(x, 3.0, -13, 0.16, 0.22, 18, wood); // roof beams
   c.box(33, 3.3, -13, 17, 0.08, 0.08, metal); // rail
   for (let k = 0; k < 13; k++) c.body(25.5 + k * 1.25, -13 + (k % 2 ? 0.15 : -0.15), { tag: String(4095 - k) });
   for (let k = 0; k < 8; k++) c.body(26 + k * 1.9, -19.5, { tag: String(4080 - k) });

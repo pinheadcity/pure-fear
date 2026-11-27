@@ -202,17 +202,16 @@ const home = {
 // ================================================================ 2. MORNING
 const morning = {
   title: 'MORNING', sub: '',
-  atmosphere: { fog: 0xe0dacc, density: 0.012, hemi: 2.6, hemiSky: 0xfff6e6, hemiGround: 0xa08a68, sun: 3.2 },
+  atmosphere: { fog: 0xcfc8b8, density: 0.02, hemi: 1.15, hemiSky: 0xf6ecd8, hemiGround: 0x6a5a44, sun: 1.6 },
   build(c) {
     buildCompound(c);
-    c.windowPane(2, 1.6, -9.88, 0, 1.4, 1.1); c.windowPane(8, 1.6, -9.88, 0, 1.4, 1.1); c.windowPane(-6, 1.6, -9.88, 0, 1.4, 1.1); c.windowPane(11.88, 1.6, -6, -Math.PI / 2, 1.4, 1.1);
+    c.windowPane(11.88, 1.6, -6, -Math.PI / 2, 1.4, 1.1);
     c.daylight(true); c.flags.day = true;
     // breakfast. it looks like breakfast.
     c.plate = c.mesh(new THREE.CylinderGeometry(0.16, 0.13, 0.02, 20), new THREE.MeshStandardMaterial({ color: 0xf0ece0, roughness: 0.3 }), 5, 0.89, -3.3);
     c.eggs = c.mesh(new THREE.SphereGeometry(0.06, 10, 8).scale(1.4, 0.35, 1), new THREE.MeshStandardMaterial({ color: 0xffe9a0, roughness: 0.4 }), 5, 0.91, -3.3);
     c.meat = c.mesh(new THREE.SphereGeometry(0.1, 10, 8).scale(1.3, 0.5, 1), new THREE.MeshStandardMaterial({ color: 0x5a1008, roughness: 0.25 }), 5, 0.93, -3.3); c.meat.visible = false;
     c.empty = photos(c, 3);
-    c.windowPane(-0.12 + 12, 1.6, 6, -Math.PI / 2, 1.4, 1.1);
     c.daylight(true);
   },
   stages: [

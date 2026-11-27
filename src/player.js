@@ -135,6 +135,10 @@ export class Player {
     if (I && this.battery < 15) { this.flashFlicker += dt; I *= 0.55 + 0.45 * Math.abs(Math.sin(this.flashFlicker * 0.9 + Math.sin(this.flashFlicker * 0.37) * 3)); }
     if (this.g.flashDim) I *= this.g.flashDim;
     I *= 1 - (this.g.dread || 0) * 0.6;
-    fl.intensity += (I * 32 - fl.intensity) * Math.min(1, dt * 6);
+    fl.intensity += (I * 40 - fl.intensity) * Math.min(1, dt * 6);
+    // beam haze and dust follow the light
+    const bm = e.beam, k = fl.intensity / 40; bm.visible = k > 0.02; bm.position.copy(fl.position); bm.lookAt(e.flashTarget.position); bm.material.uniforms.u.value = k;
+    const du = e.dust.material.uniforms; du.u.value = k; du.fp.value.copy(fl.position); du.fd.value.copy(_f); du.t.value += dt;
+    e.dust.position.set(Math.round(fl.position.x / 4) * 4, Math.round(fl.position.y / 4) * 4, Math.round(fl.position.z / 4) * 4);
   }
 }

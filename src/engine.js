@@ -1,6 +1,31 @@
 // Renderer, scene graph, player rig, static world builder (merged geometry) and collision.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+
+function flashCookie() {
+  const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d');
+  const gr = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+  gr.addColorStop(0, '#fff'); gr.addColorStop(0.18, '#fff6e8'); gr.addColorStop(0.3, '#b8ae9c'); gr.addColorStop(0.42, '#d8ccb4'); gr.addColorStop(0.55, '#6a6258'); gr.addColorStop(0.8, '#2a2622'); gr.addColorStop(1, '#000');
+  g.fillStyle = gr; g.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 25; i++) { g.fillStyle = `rgba(0,0,0,${Math.random() * 0.07})`; g.beginPath(); g.arc(128 + (Math.random() - 0.5) * 160, 128 + (Math.random() - 0.5) * 160, 3 + Math.random() * 14, 0, 7); g.fill(); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+function makeBeam() {
+  const geo = new THREE.ConeGeometry(1.6, 7, 24, 1, true); geo.translate(0, -3.5, 0); geo.rotateX(-Math.PI / 2);
+  const m = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, uniforms: { u: { value: 0 } },
+    vertexShader: 'varying float vz; varying vec3 vn; varying vec3 vv; void main(){ vz = position.z / 7.0; vec4 mv = modelViewMatrix * vec4(position,1.0); vv = normalize(-mv.xyz); vn = normalize(normalMatrix*normal); gl_Position = projectionMatrix*mv; }',
+    fragmentShader: 'uniform float u; varying float vz; varying vec3 vn; varying vec3 vv; void main(){ float edge = pow(abs(dot(vn, vv)), 2.0); float a = u * 0.05 * (1.0 - vz) * (1.0 - vz) * edge; gl_FragColor = vec4(vec3(1.0,0.95,0.85)*a, a); }' });
+  const me = new THREE.Mesh(geo, m); me.frustumCulled = false; me.renderOrder = 10; return me;
+}
+function makeDust() {
+  const N = 700, pos = new Float32Array(N * 3); for (let i = 0; i < N * 3; i++) pos[i] = (Math.random() - 0.5) * 8;
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const m = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, uniforms: { fp: { value: new THREE.Vector3() }, fd: { value: new THREE.Vector3(0, 0, -1) }, u: { value: 0 }, t: { value: 0 } },
+    vertexShader: 'uniform vec3 fp; uniform vec3 fd; uniform float u; uniform float t; varying float a; void main(){ vec3 p = position; p.y += sin(t*0.2 + position.x*3.0)*0.05; vec4 w = modelMatrix*vec4(p,1.0); vec3 d = w.xyz - fp; float l = length(d); float c = dot(d/l, fd); a = u * smoothstep(0.86, 0.97, c) * clamp(1.0 - l/7.0, 0.0, 1.0); vec4 mv = viewMatrix*w; gl_PointSize = 1.0 + 9.0/(-mv.z); a *= smoothstep(0.5, 1.2, -mv.z); gl_Position = projectionMatrix*mv; }',
+    fragmentShader: 'varying float a; void main(){ vec2 q = gl_PointCoord-0.5; float r = 1.0 - smoothstep(0.2,0.5,length(q)); gl_FragColor = vec4(vec3(1.0,0.95,0.85)*a*r*0.7, a*r); }' });
+  const p = new THREE.Points(geo, m); p.frustumCulled = false; return p;
+}
 import { mat } from './textures.js';
 
 export class Engine {
@@ -8,6 +33,8 @@ export class Engine {
     const r = this.renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
     r.setPixelRatio(Math.min(devicePixelRatio, 1.5));
     r.setSize(innerWidth, innerHeight);
+    r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.35;
+    r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFShadowMap;
     r.xr.enabled = true;
     r.xr.setReferenceSpaceType('local-floor');
     if (r.xr.setFoveation) r.xr.setFoveation(1);
@@ -31,6 +58,14 @@ export class Engine {
     this.flashTarget = new THREE.Object3D();
     this.flash.target = this.flashTarget;
     this.scene.add(this.flash, this.flashTarget);
+    // the flashlight casts real shadows and has a lens pattern (hot centre, rings, dirt)
+    this.flash.castShadow = true; this.flash.shadow.mapSize.set(1024, 1024); this.flash.shadow.bias = -0.0004; this.flash.shadow.normalBias = 0.03;
+    this.flash.shadow.camera.near = 0.15; this.flash.shadow.camera.far = 20; this.flash.map = flashCookie();
+    // environment reflections (Poly Haven HDRI), very low at night
+    new RGBELoader().load('assets/env/workshop_1k.hdr', t => { const pm = new THREE.PMREMGenerator(r); this.scene.environment = pm.fromEquirectangular(t).texture; t.dispose(); pm.dispose(); });
+    this.scene.environmentIntensity = 0.06;
+    // haze in the beam + dust that only shows where the light is
+    this.beam = makeBeam(); this.scene.add(this.beam); this.dust = makeDust(); this.scene.add(this.dust);
     this.sun = new THREE.DirectionalLight(0xfff1d8, 0); this.sun.position.set(30, 40, 20); this.scene.add(this.sun);
     this.points = [0, 1].map(() => { const p = new THREE.PointLight(0xffffff, 0, 10, 1.8); this.scene.add(p); return p; });
 
@@ -70,7 +105,7 @@ export class Engine {
     this.points.forEach(p => p.intensity = 0);
   }
   setAtmosphere({ fog = 0x000000, density = 0.09, bg, hemi = 0.25, hemiSky = 0x8890a0, hemiGround = 0x201810, sun = 0 }) {
-    this.sun.intensity = sun;
+    this.sun.intensity = sun; this.scene.environmentIntensity = sun > 0 ? 0.9 : 0.06;
     this.scene.fog.color.set(fog); this.scene.fog.density = density;
     this.scene.background.set(bg ?? fog);
     this.hemi.intensity = hemi; this.hemi.color.set(hemiSky); this.hemi.groundColor.set(hemiGround);
@@ -148,7 +183,7 @@ export class Builder {
       if (!merged) continue;
       merged.computeBoundingSphere();
       const mesh = new THREE.Mesh(merged, material);
-      mesh.matrixAutoUpdate = false; mesh.updateMatrix();
+      mesh.matrixAutoUpdate = false; mesh.updateMatrix(); mesh.castShadow = true; mesh.receiveShadow = true;
       parent.add(mesh); out.push(mesh);
     }
     this.buckets.clear();

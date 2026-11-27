@@ -1,6 +1,6 @@
 // The family. A hunter that sees, hears, chases, searches hiding places and remembers you.
 import * as THREE from 'three';
-import { character } from './assets.js';
+import { character, surf } from './assets.js';
 import { textCanvas, canvasTex } from './textures.js';
 
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _q = new THREE.Quaternion(), _qy = new THREE.Quaternion(), _Y = new THREE.Vector3(0, 1, 0);
@@ -53,30 +53,23 @@ let maskTex = null, clothMat = null, skinMat = null;
 function burlap() {
   if (maskTex) return maskTex;
   const { c, g } = textCanvas(512, 512);
-  g.fillStyle = '#7a6448'; g.fillRect(0, 0, 512, 512);
-  for (let y = 0; y < 512; y += 3) { g.fillStyle = `rgba(40,28,15,${0.15 + Math.random() * 0.2})`; g.fillRect(0, y, 512, 1); }
-  for (let x = 0; x < 512; x += 3) { g.fillStyle = `rgba(160,130,90,${0.08 + Math.random() * 0.12})`; g.fillRect(x, 0, 1, 512); }
-  for (let i = 0; i < 18; i++) { const x = Math.random() * 512, y = Math.random() * 512, r = 10 + Math.random() * 60; const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, 'rgba(70,8,4,0.85)'); gr.addColorStop(1, 'rgba(70,8,4,0)'); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); }
-  // the face is drawn twice (front and back of the sphere) so it reads from any mapping: ragged eye holes, stitched mouth
-  for (const cx of [128, 384]) {
-    g.fillStyle = '#030201';
-    for (const ox of [-38, 38]) { g.beginPath(); for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2, r = 20 + Math.random() * 9; g.lineTo(cx + ox + Math.cos(a) * r, 205 + Math.sin(a) * r * 0.8); } g.closePath(); g.fill(); }
-    g.strokeStyle = 'rgba(60,8,4,0.9)'; g.lineWidth = 3;
-    for (const ox of [-38, 38]) for (let k = 0; k < 5; k++) { g.beginPath(); g.moveTo(cx + ox - 10 + k * 5, 228); g.lineTo(cx + ox - 12 + k * 6, 260 + Math.random() * 60); g.stroke(); }
-    g.strokeStyle = '#120603'; g.lineWidth = 5; g.beginPath(); g.moveTo(cx - 50, 300); g.quadraticCurveTo(cx, 318, cx + 50, 296); g.stroke();
-    g.lineWidth = 3; for (let k = -44; k <= 44; k += 11) { g.beginPath(); g.moveTo(cx + k, 288); g.lineTo(cx + k + 2, 322); g.stroke(); }
-    g.fillStyle = 'rgba(70,6,3,0.85)'; for (let k = 0; k < 4; k++) g.fillRect(cx - 35 + k * 22 + Math.random() * 8, 312, 4 + Math.random() * 4, 30 + Math.random() * 90);
-  }
+  g.fillStyle = '#4e4030'; g.fillRect(0, 0, 512, 512);
+  for (let y = 0; y < 512; y += 2) { g.fillStyle = `rgba(20,14,8,${0.2 + Math.random() * 0.25})`; g.fillRect(0, y, 512, 1); }
+  for (let x = 0; x < 512; x += 2) { g.fillStyle = `rgba(120,100,70,${0.06 + Math.random() * 0.1})`; g.fillRect(x, 0, 1, 512); }
+  for (let i = 0; i < 26; i++) { const x = Math.random() * 512, y = Math.random() * 512, r = 10 + Math.random() * 70; const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(${30 + Math.random() * 30},${8 + Math.random() * 10},4,0.8)`); gr.addColorStop(1, 'rgba(30,10,4,0)'); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); }
+  const cx = 256;
+  // ragged eye holes, cut with a knife, and the dark behind them
+  for (const ox of [-46, 46]) { g.fillStyle = '#000'; g.beginPath(); for (let k = 0; k < 18; k++) { const a = k / 18 * Math.PI * 2, r = 22 + Math.random() * 12; g.lineTo(cx + ox + Math.cos(a) * r * 1.1, 195 + Math.sin(a) * r * 0.7); } g.closePath(); g.fill();
+    g.strokeStyle = 'rgba(40,6,2,0.85)'; g.lineWidth = 3; for (let k = 0; k < 6; k++) { g.beginPath(); g.moveTo(cx + ox - 12 + k * 5, 212); g.lineTo(cx + ox - 14 + k * 6, 240 + Math.random() * 90); g.stroke(); } }
+  // mouth sewn shut with twine
+  g.strokeStyle = '#0d0603'; g.lineWidth = 5; g.beginPath(); g.moveTo(cx - 58, 290); g.quadraticCurveTo(cx, 300, cx + 58, 286); g.stroke();
+  g.strokeStyle = '#2a1c10'; g.lineWidth = 4; for (let k = -52; k <= 52; k += 13) { g.beginPath(); g.moveTo(cx + k - 2, 274); g.lineTo(cx + k + 3, 308); g.stroke(); }
+  g.fillStyle = 'rgba(45,4,2,0.9)'; for (let k = 0; k < 5; k++) g.fillRect(cx - 45 + k * 22 + Math.random() * 6, 300, 3 + Math.random() * 4, 40 + Math.random() * 120);
   maskTex = canvasTex(c); return maskTex;
 }
 function cloth() {
   if (clothMat) return clothMat;
-  const { c, g } = textCanvas(256, 256);
-  g.fillStyle = '#3a3428'; g.fillRect(0, 0, 256, 256);
-  for (let i = 0; i < 4000; i++) { g.fillStyle = `rgba(${Math.random() < 0.5 ? '0,0,0' : '90,80,60'},0.15)`; g.fillRect(Math.random() * 256, Math.random() * 256, 2, 2); }
-  for (let i = 0; i < 14; i++) { const x = Math.random() * 256, y = Math.random() * 256, r = 8 + Math.random() * 40; const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, 'rgba(60,4,2,0.9)'); gr.addColorStop(1, 'rgba(60,4,2,0)'); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); }
-  const t = canvasTex(c); t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  clothMat = new THREE.MeshStandardMaterial({ map: t, roughness: 0.95 });
+  clothMat = surf('denim_fabric', { color: 0x5a5448, rough: 1 }).clone(); clothMat.color.set(0x55504a);
   skinMat = new THREE.MeshStandardMaterial({ color: 0xb8a898, roughness: 0.7 });
   return clothMat;
 }
@@ -87,20 +80,24 @@ export function dress(ch, { mask = true, apron = false, skin = false, scale = 1,
   }
   const extras = [];
   if (mask) {
-    const m = new THREE.Mesh(new THREE.SphereGeometry(0.135, 16, 12), new THREE.MeshStandardMaterial({ map: burlap(), roughness: 1 }));
-    m.scale.set(1.12, 1.32, 1.15); extras.push({ mesh: m, bone: ch.bone('Head'), off: new THREE.Vector3(0, 0.1, 0.02), rotY: Math.PI });
+    const prof = [[0.05, -0.14], [0.058, -0.11], [0.09, -0.09], [0.125, -0.05], [0.138, 0.0], [0.14, 0.06], [0.13, 0.12], [0.1, 0.17], [0.06, 0.2], [0.035, 0.235], [0.045, 0.27], [0.0, 0.29]].map(([r, y]) => new THREE.Vector2(r, y));
+    const sg = new THREE.LatheGeometry(prof, 36), sp = sg.attributes.position;
+    for (let i = 0; i < sp.count; i++) { const x = sp.getX(i), y = sp.getY(i), z = sp.getZ(i), a = Math.atan2(z, x); const f = 1 + 0.07 * Math.sin(a * 7 + y * 25) * Math.max(0, 0.6 - Math.abs(y - 0.18) * 4) + 0.025 * Math.sin(a * 23 + y * 60) + (y < -0.08 ? 0.05 * Math.sin(a * 11) : 0); sp.setXYZ(i, x * f, y + 0.01 * Math.sin(a * 5), z * f); }
+    sg.computeVertexNormals();
+    const m = new THREE.Mesh(sg, new THREE.MeshStandardMaterial({ map: burlap(), bumpMap: burlap(), bumpScale: 3, roughness: 1, side: THREE.DoubleSide })); m.castShadow = true;
+    extras.push({ mesh: m, bone: ch.bone('Head'), off: new THREE.Vector3(0, 0.07, 0.015), rotY: Math.PI });
     // the rope tied around the neck
     const rope = new THREE.Mesh(new THREE.TorusGeometry(0.085, 0.012, 6, 16), new THREE.MeshStandardMaterial({ color: 0x5a4a30, roughness: 1 }));
     rope.rotation.x = Math.PI / 2; const rg = new THREE.Group(); rg.add(rope);
     extras.push({ mesh: rg, bone: ch.bone('Neck'), off: new THREE.Vector3(0, 0.03, 0), rotY: 0 });
   }
   if (apron) {
-    const { c, g } = textCanvas(128, 256); g.fillStyle = '#4a4034'; g.fillRect(0, 0, 128, 256);
-    for (let i = 0; i < 2500; i++) { g.fillStyle = `rgba(${Math.random() < 0.5 ? '20,15,10' : '90,80,64'},0.25)`; g.fillRect(Math.random() * 128, Math.random() * 256, 2, 2); }
+    const { c, g } = textCanvas(128, 256);
     for (let i = 0; i < 9; i++) { const x = Math.random() * 128, y = 40 + Math.random() * 180, r = 14 + Math.random() * 30; const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, 'rgba(48,3,1,0.95)'); gr.addColorStop(1, 'rgba(48,3,1,0)'); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); }
     for (let i = 0; i < 16; i++) { g.strokeStyle = `rgba(${45 + Math.random() * 25},2,1,${0.5 + Math.random() * 0.4})`; g.lineWidth = 2 + Math.random() * 5; const x = Math.random() * 128; g.beginPath(); g.moveTo(x, 80 + Math.random() * 80); g.lineTo(x + (Math.random() - 0.5) * 10, 256); g.stroke(); }
     for (let i = 0; i < 4; i++) { g.strokeStyle = 'rgba(40,2,1,0.8)'; g.lineWidth = 10; g.lineCap = 'round'; g.beginPath(); const y = 60 + Math.random() * 120; g.moveTo(10, y); g.lineTo(118, y + (Math.random() - 0.5) * 30); g.stroke(); } // wiped hands
-    const ap = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.95), new THREE.MeshStandardMaterial({ map: canvasTex(c), roughness: 0.35, side: THREE.DoubleSide }));
+    const ap = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.95, 4, 8), surf('brown_leather', { rough: 0.6 })); ap.castShadow = true;
+    const ov = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.95), new THREE.MeshStandardMaterial({ map: canvasTex(c), transparent: true, roughness: 0.15, alphaTest: 0.02, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 })); ov.position.z = 0.003; ap.add(ov);
     extras.push({ mesh: ap, bone: ch.bone('Spine1') || ch.bone('Spine'), off: new THREE.Vector3(0, -0.25, 0.16), rotY: 0 });
   }
   ch.extras = extras;
@@ -190,7 +187,7 @@ export class Hunter {
   set(state) { this.state = state; this.t = 0; }
   update(dt) {
     this.mixer.update(dt); syncExtras(this.ch, this.g.engine.world);
-    if (!this.enabled || this.g.dying) return;
+    if (!this.enabled || this.g.dying || this.g.noHunt) return;
     const g = this.g, p = g.engine.headPos(new THREE.Vector3()), dist = Math.hypot(p.x - this.pos.x, p.z - this.pos.z);
     this.t += dt;
     const sees = this.canSee();

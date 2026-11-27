@@ -9,12 +9,15 @@ All third-party assets are bundled in `assets/` (no runtime downloads).
   wooden_lantern_01, vintage_oil_lamp, metal_toolbox, cardboard_box_01, handsaw_wood. Textures re-encoded to 512px WebP.
 - **Xbot.glb, Michelle.glb** — from the three.js examples (https://github.com/mrdoob/three.js, examples/models/gltf), originally
   created with Adobe Mixamo. Used under the Mixamo terms of use (characters and animations may be used in projects; not redistributed
-  as standalone assets).
+  as standalone assets). Simplified with meshoptimizer (XbotLow.glb is a reduced copy used for the wrapped bodies).
+
+## Environment
+- **Poly Haven** HDRI `abandoned_workshop` (CC0), used for reflections.
 
 ## Textures
 - **Poly Haven**, CC0: decrepit_wallpaper, dirty_tiles, dirty_concrete, rusty_metal_02, rusty_corrugated_iron, wood_planks_dirt,
   weathered_planks, worn_cracked_plaster, dirt_floor, muddy_tracks, dirty_carpet, metal_grate_rusty, wood_peeling_paint_weathered,
-  peeling_painted_wall. Re-encoded to smaller JPEGs.
+  peeling_painted_wall, denim_fabric, brown_leather (colour, normal and roughness maps). Re-encoded JPEGs.
 - Blood, burlap mask, apron, plastic wrap, notes: drawn procedurally on canvas at runtime.
 
 ## Sounds (all CC0, from OpenGameArt.org)
