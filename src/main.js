@@ -7,7 +7,8 @@ import { Player } from './player.js';
 import { HUD, Panel, Reader, Vignette } from './ui.js';
 import { Save } from './save.js';
 import { Ctx } from './world.js';
-import { NIGHTS } from './nights.js';
+import { NIGHTS, ENDINGS } from './nights.js';
+import { Dialogue } from './dialogue.js';
 import { loadModels, loadSounds, sound, prop, surf } from './assets.js';
 import { textCanvas, canvasTex } from './textures.js';
 
@@ -18,7 +19,7 @@ class Game {
     this.save = new Save();
     this.engine = new Engine();
     this.audio = new Audio(); this.audio.volume = this.settings.volume; this.audio.sampleFn = sound;
-    this.input = new Input(this.engine);
+    this.input = new Input(this.engine); this.dialogue = new Dialogue(this);
     this.player = new Player(this);
     this.hud = new HUD(this); this.panel = new Panel(this); this.reader = new Reader(this); this.vignette = new Vignette(this);
     this.state = 'title'; this.ctx = null; this.timers = []; this.hunters = []; this.watchers = []; this.flashAllowed = true; this.flashDim = 1;
@@ -55,6 +56,7 @@ class Game {
     for (const h of [...this.hunters, ...this.watchers]) for (const e of h.ch?.extras || []) e.mesh.removeFromParent();
     this.engine.clearWorld(); this.hunters = []; this.watchers = []; this.timers.length = 0;
     this.player.floorCheck = null; this.player.enabled = true; this.flashAllowed = true; this.flashDim = 1; this.player.inventory.clear();
+    this.dialogue.stop(); this.audio.birds(false); this.player.speed = 1.6; this.hud.subtitle = ''; this.hud.subT = 0;
     this.panel.hide(); this.modal = null; this.reader.hide(); this.exitHide(true); this.dread = 0; this.audio.setDread(0); this.audio.heartRate = 0; this.audio.ambience(null);
     this.engine.fadeMesh.material.color.set(0); this.hudPrompt = null;
   }
@@ -74,9 +76,9 @@ class Game {
   mainMenu() {
     const s = this.save.d, xr = this.engine.xr, unlockAll = /[?&]unlock=/.test(location.search);
     const items = [];
-    if (s.inProgress && NIGHTS[s.chapter]) items.push({ label: `CONTINUE  (NIGHT ${s.chapter + 1})`, fn: () => this.loadNight(s.chapter, s.stage) });
-    items.push({ label: 'BEGIN', fn: () => this.loadNight(0, 0) });
-    items.push({ label: 'NIGHTS', fn: () => this.panel.show({ title: 'NIGHTS', items: [...NIGHTS.map((n, i) => ({ label: `${i + 1}. ${n.title}`, disabled: !(unlockAll || i < s.unlocked), fn: () => this.loadNight(i, 0) })), { label: 'BACK', fn: () => this.mainMenu() }], top: 140 }, false) });
+    if (s.inProgress && NIGHTS[s.chapter]) items.push({ label: `CONTINUE  (${NIGHTS[s.chapter].title})`, fn: () => this.loadNight(s.chapter, s.stage) });
+    items.push({ label: 'BEGIN', fn: () => { this.save.d.story = {}; this.save.write(); this.loadNight(0, 0); } });
+    items.push({ label: 'CHAPTERS', fn: () => this.panel.show({ title: 'CHAPTERS', items: [...NIGHTS.map((n, i) => ({ label: `${i + 1}. ${n.title}`, disabled: !(unlockAll || i < s.unlocked), fn: () => this.loadNight(i, 0) })), { label: 'BACK', fn: () => this.mainMenu() }], top: 140 }, false) });
     items.push({ label: 'OPTIONS', fn: () => this.optionsMenu(() => this.mainMenu()) });
     if (xr) items.push({ label: 'EXIT VR', fn: () => this.engine.renderer.xr.getSession()?.end() });
     this.panel.show({ title: 'PURE FEAR', body: `THE PROCESSING\nCopies processed: ${4096 + s.restores}\nPoint and pull the trigger. Hold both grips 2s to pause.`, items, top: 260, footer: 'adults only. headphones. turn the lights off.' });
@@ -90,6 +92,7 @@ class Game {
       { label: () => 'SEATED MODE: ' + (S.seated ? 'ON' : 'OFF'), fn: () => { S.seated = !S.seated; w(); } },
       { label: () => 'COMFORT VIGNETTE: ' + (S.vignette ? 'ON' : 'OFF'), fn: () => { S.vignette = !S.vignette; w(); } },
       { label: () => 'THEY HEAR YOU (MIC): ' + (S.mic ? 'ON' : 'OFF'), fn: async () => { if (!S.mic) { S.mic = await this.audio.enableMic(); } else { this.audio.disableMic(); S.mic = false; } w(); this.panel.render(); } },
+      { label: () => 'SPOKEN DIALOGUE: ' + (S.voices === false ? 'OFF' : 'ON'), fn: () => { S.voices = S.voices === false; w(); } },
       { label: () => 'VOLUME: ' + Math.round(S.volume * 100) + '%', fn: () => { S.volume = S.volume >= 1 ? 0.5 : S.volume + 0.25; this.audio.setVolume(S.volume); w(); } },
       { label: 'ERASE PROGRESS', fn: () => { this.save.reset(); this.toMenu(); } },
       { label: 'BACK', fn: back },
@@ -115,7 +118,7 @@ class Game {
     this.player.battery = 100; this.player.flashOn = false; this.trail = [];
     def.build(ctx); ctx.flush();
     if (!this.engine.xr) this.input.lock();
-    this.hud.msg(stage === 0 ? `NIGHT ${i + 1}: ${def.title}` : `NIGHT ${i + 1}. AGAIN.`, 4);
+    this.hud.msg(stage === 0 ? `${['I', 'II', 'III', 'IV', 'V', 'VI'][i]}.  ${def.title}` : `${def.title}. AGAIN.`, 4);
     if (stage === 0 && def.sub) this.after(2, () => this.hud.sub(def.sub, 6));
     this.after(0.6, () => this.engine.setFade(0));
     ctx.runStages(stage).catch(err => console.error(err));
@@ -129,9 +132,10 @@ class Game {
       this.state = 'menu';
       if (i >= NIGHTS.length - 1) {
         this.save.d.inProgress = false; this.save.write();
-        return this.panel.show({ title: 'PROCESSED', body: `You got her to the road.\nThere was no road. There was the yard, and the house, and a chair with your shape worn into it.\n\nCopies before you: ${4095 + this.save.d.restores}.\nThe next one wakes up in a moment. It will find your footprints.`, items: [{ label: 'MENU', fn: () => { this.engine.setFade(0); this.toMenu(); } }], top: 700 }, true);
+        const st = this.save.d.story || {}, E = (ENDINGS[st.ending] || ENDINGS.home)(st, 4095 + this.save.d.restores);
+        return this.panel.show({ title: E.title, body: E.text, items: [{ label: 'MENU', fn: () => { this.engine.setFade(0); this.toMenu(); } }], top: 760 }, true);
       }
-      this.panel.show({ title: `NIGHT ${i + 1} SURVIVED`, body: `Next: ${NIGHTS[i + 1].title}`, items: [{ label: 'CONTINUE', fn: () => this.loadNight(i + 1, 0) }, { label: 'MENU', fn: () => { this.engine.setFade(0); this.toMenu(); } }], top: 400 }, true);
+      this.panel.show({ title: NIGHTS[i].title, body: `Copies processed so far: ${4096 + this.save.d.restores}\n\nNext: ${NIGHTS[i + 1].title}`, items: [{ label: 'CONTINUE', fn: () => this.loadNight(i + 1, 0) }, { label: 'MENU', fn: () => { this.engine.setFade(0); this.toMenu(); } }], top: 400 }, true);
     });
   }
   stairs(x, z, yaw) {

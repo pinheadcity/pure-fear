@@ -172,6 +172,60 @@ export class Ctx {
     spot.it = this.interact(grp, 'hide', () => this.g.enterHide(spot), { range: 1.8 });
     this.hides.push(spot); return spot;
   }
+  // a photograph: sepia, a family posed in front of the house, one figure with no face (number below)
+  photo(x, y, z, ry, { n = 4, tag = '4,095', w = 0.42, h = 0.32 } = {}) {
+    const { c, g } = textCanvas(256, 196);
+    const gr = g.createLinearGradient(0, 0, 0, 196); gr.addColorStop(0, '#b9a27c'); gr.addColorStop(1, '#6f5a40'); g.fillStyle = gr; g.fillRect(0, 0, 256, 196);
+    g.fillStyle = '#5a4630'; g.fillRect(20, 30, 216, 80); g.fillStyle = '#3a2c1c'; g.fillRect(110, 60, 30, 50);
+    for (let i = 0; i < n; i++) {
+      const fx = 40 + i * (176 / Math.max(1, n - 1)), faceless = i === n - 1, tall = i === 0 ? 1.15 : i === 1 ? 1 : 0.85;
+      g.fillStyle = faceless ? '#d8d0c0' : '#2a2018'; g.beginPath(); g.ellipse(fx, 120 - 30 * tall, 9, 11, 0, 0, 7); g.fill();
+      g.fillRect(fx - 12, 130 - 30 * tall, 24, 60 * tall);
+      if (!faceless) { g.fillStyle = '#c8b090'; g.fillRect(fx - 4, 116 - 30 * tall, 2, 2); g.fillRect(fx + 2, 116 - 30 * tall, 2, 2); g.fillRect(fx - 3, 123 - 30 * tall, 6, 1); }
+    }
+    g.fillStyle = 'rgba(40,20,10,0.8)'; g.font = '14px serif'; g.fillText('our family  (' + tag + ')', 20, 186);
+    for (let i = 0; i < 600; i++) { g.fillStyle = `rgba(0,0,0,${Math.random() * 0.15})`; g.fillRect(Math.random() * 256, Math.random() * 196, 2, 2); }
+    const fr = this.mesh(new THREE.BoxGeometry(w + 0.05, h + 0.05, 0.02), new THREE.MeshStandardMaterial({ color: 0x2a1a10, roughness: 0.6 }), x, y, z, ry);
+    const pic = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: canvasTex(c), roughness: 0.5 })); pic.position.z = 0.012; fr.add(pic);
+    return fr;
+  }
+  // a window full of daylight (or night)
+  windowPane(x, y, z, ry, w = 1.2, h = 1.0) {
+    const m = new THREE.MeshBasicMaterial({ color: 0x0a0c10 }); const me = this.mesh(new THREE.PlaneGeometry(w, h), m, x, y, z, ry);
+    const fr = new THREE.MeshStandardMaterial({ color: 0x2a2218, roughness: 0.8 });
+    const bars = [new THREE.BoxGeometry(w, 0.05, 0.05), new THREE.BoxGeometry(0.05, h, 0.05)]; for (const b of bars) { const bm = new THREE.Mesh(b, fr); bm.position.z = 0.02; me.add(bm); }
+    this.windows = this.windows || []; this.windows.push(me); return me;
+  }
+  daylight(on) {
+    const e = this.e;
+    if (on) { e.setAtmosphere({ fog: 0xe0dacc, density: 0.012, hemi: 2.6, hemiSky: 0xfff6e6, hemiGround: 0xa08a68, sun: 3.2 }); e.points[0].intensity = 0; e.points[1].intensity = 0; (this.windows || []).forEach(w => w.material.color.set(0xfff8e8)); }
+    else (this.windows || []).forEach(w => w.material.color.set(0x0a0c10));
+  }
+  choice(title, body, options) {
+    return new Promise(resolve => {
+      const show = () => this.g.panel.show({ title, body, items: options.map((o, i) => ({ label: o, fn: () => { this.g.panel.hide(); this.g.modal = null; resolve(i); } })), top: 420 }, false);
+      this.g.panel.show({ title: '', items: [] }, true); show(); this.g.modal = show;
+    });
+  }
+  // scripted walk for a character (Hunter/Watcher-like with .pos or .root)
+  walk(ch, pts, speed = 1.0) {
+    const root = ch.root, path = pts.map(([x, z]) => new THREE.Vector3(x, 0, z));
+    const play = n => { if (ch.play) ch.play(n, 0.3, speed); else if (ch.ch?.actions?.[n] && ch._cur !== n) { ch.ch.actions[n].reset().fadeIn(0.3).play(); if (ch._curA) ch._curA.fadeOut(0.3); ch._curA = ch.ch.actions[n]; ch._cur = n; } };
+    return this.until(() => {
+      const t = path[0]; if (!t) { play('idle'); return true; }
+      const p = root.position, dx = t.x - p.x, dz = t.z - p.z, d = Math.hypot(dx, dz);
+      if (d < 0.08) { path.shift(); return false; }
+      const mv = Math.min(d, speed * this.dt); p.x += dx / d * mv; p.z += dz / d * mv;
+      const yaw = Math.atan2(-dx, -dz); if (ch.face) ch.face(yaw, this.dt * 6); else root.rotation.y = yaw + Math.PI;
+      play('walk'); return false;
+    });
+  }
+  lookAt(ch, x, z) { const p = ch.root.position, yaw = Math.atan2(-(x - p.x), -(z - p.z)); if (ch.face) ch.face(yaw, 1); else { ch.yaw = yaw; ch.root.rotation.y = yaw + Math.PI; } }
+  // run fn once pos has been out of the player's view for a moment
+  whenUnseen(pos, fn, after = 0.6) {
+    let t = 0; const u = this.onUpdate(dt => { const h = this.head(), f = this.e.headDir(new THREE.Vector3()), d = new THREE.Vector3().subVectors(pos, h); const l = d.length(); if (l > 1.2 && f.dot(d) / l < 0.35) { t += dt; if (t > after) { u.dead = true; fn(); } } else t = 0; });
+    return u;
+  }
   // ---------- script helpers ----------
   onUpdate(fn) { const u = { fn, dead: false }; this.updaters.push(u); return u; }
   until(cond) { return new Promise(res => this.waiters.push({ cond, res })); }

@@ -113,7 +113,7 @@ export class HUD {
     this.subtitle = ''; this.subT = 0; this.reticle = false; this.extra = '';
   }
   msg(text, dur = 4, style = 'sys') { this.msgs.push({ text, t: dur, style, age: 0 }); if (this.msgs.length > 3) this.msgs.shift(); this.dirty = true; if (style === 'sys') this.g.audio.beep(660, 0.04, 0.03); }
-  sub(text, dur = 5) { this.subtitle = text; this.subT = dur; this.dirty = true; }
+  sub(text, dur = 5, color) { this.subtitle = text; this.subColor = color || null; this.subT = dur; this.dirty = true; }
   setObjective(t, show = true) { this.objective = t; this.objT = show ? 7 : 0; this.dirty = true; }
   setPrompt(p) { if (p !== this.prompt) { this.prompt = p; this.dirty = true; } }
   update(dt) {
@@ -141,7 +141,7 @@ export class HUD {
     if (this.objT > 0 && this.objective) {
       g.font = `24px ${FONT}`; g.fillStyle = `rgba(200,200,180,${Math.min(1, this.objT)})`; wrapText(g, 'OBJECTIVE: ' + this.objective, W / 2, 232, 760, 28);
     }
-    if (this.subtitle) { g.font = `italic 26px ${FONT}`; g.fillStyle = 'rgba(210,210,210,0.9)'; wrapText(g, this.subtitle, W / 2, 340, 760, 32); }
+    if (this.subtitle) { g.font = `${this.subColor ? 'bold ' : 'italic '}26px ${FONT}`; g.fillStyle = 'rgba(0,0,0,0.55)'; g.fillRect(112, 312, 800, 112); g.fillStyle = this.subColor || 'rgba(210,210,210,0.9)'; wrapText(g, this.subtitle, W / 2, 342, 760, 32); }
     if (this.prompt) { g.font = `bold 28px ${FONT}`; g.fillStyle = 'rgba(230,230,220,0.9)'; g.fillText(this.prompt, W / 2, 300); }
     if (this.reticle && !this.g.engine.xr) { g.fillStyle = 'rgba(255,255,255,0.5)'; g.fillRect(W / 2 - 2, 256 + 80 - 2, 4, 4); }
     // battery (top-left of lower area). May lie.

@@ -31,6 +31,7 @@ export class Engine {
     this.flashTarget = new THREE.Object3D();
     this.flash.target = this.flashTarget;
     this.scene.add(this.flash, this.flashTarget);
+    this.sun = new THREE.DirectionalLight(0xfff1d8, 0); this.sun.position.set(30, 40, 20); this.scene.add(this.sun);
     this.points = [0, 1].map(() => { const p = new THREE.PointLight(0xffffff, 0, 10, 1.8); this.scene.add(p); return p; });
 
     // Fade sphere around the head
@@ -68,7 +69,8 @@ export class Engine {
     this.colliders.clear();
     this.points.forEach(p => p.intensity = 0);
   }
-  setAtmosphere({ fog = 0x000000, density = 0.09, bg, hemi = 0.25, hemiSky = 0x8890a0, hemiGround = 0x201810 }) {
+  setAtmosphere({ fog = 0x000000, density = 0.09, bg, hemi = 0.25, hemiSky = 0x8890a0, hemiGround = 0x201810, sun = 0 }) {
+    this.sun.intensity = sun;
     this.scene.fog.color.set(fog); this.scene.fog.density = density;
     this.scene.background.set(bg ?? fog);
     this.hemi.intensity = hemi; this.hemi.color.set(hemiSky); this.hemi.groundColor.set(hemiGround);

@@ -12,26 +12,31 @@ VR can cause motion sickness: use snap turn, teleport and the comfort vignette i
 **In VR, holding both grip buttons for 2 seconds always opens the pause / exit menu.** On desktop press Esc.
 
 ## The game
-You wake up strapped into a barber chair in a farmhouse. A masked family "processes" people here. The bodies hanging in the
-barn are tagged with numbers, and they all have your shape: you are copy **4,096**. Every time you are caught, you are
-processed, and the next copy wakes up in the chair. It finds **your footprints** and **your body** where you died.
+You wake up strapped into a barber chair. A woman behind you whispers *shh, there you are*. This family loves you. They have loved
+4,095 of you before. The bodies hanging in the barn are tagged with numbers and they all have your shape: you are copy **4,096**.
 
-Five nights:
-1. **The Chair** — struggle free (yank your real hands in VR), don't move when he leans in, get out of the house.
-2. **The Kill Floor** — the barn. Reach inside the newest body for the key. Cut the chain on the gate. Something is waiting.
-3. **Dinner** — they set a place for you. Keep your eyes on him. Then Grandmother's room: she's blind, and hears everything.
-4. **The Basement** — Twelve is still alive in a cage. Pry it open. He comes down the stairs.
-5. **The Road** — get her through the gate. She coughs. Everyone is awake.
+The horror is mostly not the dark. It is the tenderness: a mother who calls you sweetheart while your father works in the barn,
+a sunlit breakfast where the plate changes when you look away, being made to say grace out loud (the game records your voice
+if the microphone is on, keeps it only in memory, and plays it back to you later), and a supper where you are handed a cleaver.
+
+Six chapters, fully voiced in subtitles (and the browser's speech voice where available), with in-engine cutscenes:
+1. **Home** — waking up. The rules. He leans in and tells you to hold still. Then escape the house.
+2. **Morning** — daylight, birds, breakfast, family photos with a frame for you. Grace. Then he takes you to the barn to watch.
+3. **The Kill Floor** — a baby monitor that picks up the basement. Reach inside the body with your number. Cut the gate chain.
+4. **Supper** — your sister is brought up from the basement. *Pick it up.* You choose: do it, offer your own hand, or watch.
+   The family, Twelve, and the ending all remember which.
+5. **The Basement** — a tape with your voice on it. Twelve, and what she says to you depends on supper. Get her out.
+6. **The Road** — escort her through the yard while everyone hunts you. Then the gate, what's under her sack, and the last choice.
+
+Two endings, each shaded by what you did at supper and whether you said grace. When you die, the next copy wakes up and finds
+your footprints and your body. The family's hunter remembers which wardrobe you hide in, across sessions, and says so.
 
 ### How the fear works
-- **He hunts for real.** Sight with line of sight and a vision cone, hearing (your footsteps, doors, the microphone),
-  your flashlight beam, chases, searching. He opens the hiding place he saw you enter, and checks the ones you used before
-  (that memory is saved between sessions).
-- **Hiding** in wardrobes and lockers: you watch through the slats while he walks past.
-- **They hear you.** With the microphone on (OPTIONS), your real breathing and voice carry. Crouching (for real, in VR) is quieter.
-- **Physical VR**: struggling against straps with your arms, holding the trigger while you reach into a body bag, holding still
-  while he breathes in your face, forced to keep looking at him at dinner.
-- Being caught is a capture sequence, not a fade: he is in your face, and then you are processed.
+- **He hunts for real**: sight with line of sight, hearing (footsteps, doors, your breathing on the mic), your flashlight beam,
+  chases, searching hiding places, persistent memory. He talks while he hunts.
+- **Hiding** in wardrobes and lockers, watching through the slats.
+- **Physical VR**: yank against straps (slowly, when someone is listening), hold still while he breathes on you, keep your eyes
+  on him at the table, reach into a body bag, bring a cleaver down with your own hand.
 
 ## Controls
 | | VR (Quest) | Desktop | Gamepad |
@@ -43,6 +48,8 @@ Five nights:
 | Run | Left stick click | Shift | LB |
 | Crouch (quieter) | Crouch physically | C | B |
 | Pause | Hold both grips 2 s | Esc | Start |
+
+Options include spoken dialogue on/off and the microphone ("they hear you").
 
 `?unlock=all` in the URL unlocks every night for testing.
 

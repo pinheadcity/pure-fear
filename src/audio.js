@@ -247,6 +247,24 @@ export class Audio {
     return h;
   }
   ambience(name, vol = 0.5) { if (this.ambH) this.ambH.stop(2); this.ambH = name ? this.play(name, null, { vol, loop: true, jitter: 0, dry: true }) : null; }
+  // daylight: birds outside the window
+  birds(on) {
+    if (this.birdT) { clearInterval(this.birdT); this.birdT = null; }
+    if (!on || !this.ctx) return;
+    this.birdT = setInterval(() => {
+      if (!this.ctx || this.ctx.state !== 'running' || Math.random() < 0.4) return;
+      const c = this.ctx, at = this.t, n = 2 + (Math.random() * 5 | 0), base = 2600 + Math.random() * 2200, pos = { x: (Math.random() - 0.5) * 40, y: 4, z: (Math.random() - 0.5) * 40 };
+      const dest = this._dest(pos, 6);
+      for (let i = 0; i < n; i++) { const o = c.createOscillator(), g = c.createGain(), t = at + i * (0.09 + Math.random() * 0.05); o.frequency.setValueAtTime(base, t); o.frequency.exponentialRampToValueAtTime(base * (1.2 + Math.random() * 0.4), t + 0.05); o.connect(g); g.connect(dest); this._env(g, t, 0.005, 0.05, 0.02, 0.05); o.start(t); o.stop(t + 0.12); }
+    }, 900);
+  }
+  // flies over meat
+  flies(pos, vol = 0.12) {
+    if (!this.ctx) return null; const c = this.ctx, n = c.createBufferSource(); n.buffer = this.noiseBuf; n.loop = true;
+    const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 230; f.Q.value = 6; const g = c.createGain(); g.gain.value = vol;
+    const lfo = c.createOscillator(), lg = c.createGain(); lfo.frequency.value = 7; lg.gain.value = 80; lfo.connect(lg); lg.connect(f.frequency); lfo.start();
+    n.connect(f); f.connect(g); g.connect(this._dest(pos, 1)); n.start(); return { stop: () => { try { n.stop(); lfo.stop(); } catch (e) { } } };
+  }
   silence(sec = 3) {
     if (!this.ctx) return; const g = this.master.gain, at = this.t;
     g.cancelScheduledValues(at); g.setValueAtTime(g.value, at); g.linearRampToValueAtTime(0.0001, at + 0.04);

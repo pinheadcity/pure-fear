@@ -291,7 +291,7 @@ export class Watcher {
     }
     if (g.player.noise * this.hearing * (g.hidden ? 0.3 : 1) > d) noticed = true;
     if (noticed) {
-      this.cool = 12; this.act.timeScale = 0;
+      this.cool = 12; this.act.timeScale = 0; this.onNotice && this.onNotice();
       g.audio.play(['c_scream1', 'scream1'], new THREE.Vector3(x, 1.6, z), { vol: 1.2, ref: 3 });
       this.yaw = Math.atan2(-(p.x - x), -(p.z - z)); this.root.rotation.y = this.yaw + Math.PI;
       for (const h of g.hunters) { h.lastHeard.set(p.x, 0, p.z); h.lastSeen.set(p.x, 0, p.z); h.alert = 0.5; h.set('investigate'); h.goTo(p.x, p.z, true); h.running = true; }
