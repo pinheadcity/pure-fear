@@ -124,7 +124,7 @@ export default {
       skip(c) { c.flags.memb.C.open(); c.flags.chunks[0].dissolve(); c.flags.chunks[1].dissolve(); },
     },
     { // 2 anchor 3: the reflection
-      spawn: [0, -35, 0], obj: 'Anchor: the reflection. Walk into it.',
+      spawn: [0, -37.5, 0], obj: 'Anchor: the reflection. Walk into it.',
       async run(c) {
         const F = c.flags, ent = c.entity;
         F.chunks[2].dissolve();
