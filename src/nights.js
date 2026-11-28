@@ -201,7 +201,7 @@ const supper = {
   atmosphere: {},
   build(c) {
     look(c, 'night'); buildCompound(c); c.trim = null;
-    c.bulb(0, 5, 2.3, -5, 0xffb070, 5, 8); c.bulb(1, 33, 3.2, -12, 0xff6030, 5, 10);
+    c.bulb(0, 5, 2.3, -5, 0xffa060, 3, 8); c.bulb(1, 33, 3.2, -12, 0xff6030, 5, 10);
     c.plate = c.mesh(new THREE.CylinderGeometry(0.16, 0.13, 0.02, 20), new THREE.MeshStandardMaterial({ color: 0xe8e0d0, roughness: 0.3 }), 5, c.diningTop + 0.012, -3.3);
     c.mesh(new THREE.SphereGeometry(0.1, 10, 8).scale(1.3, 0.5, 1), new THREE.MeshStandardMaterial({ color: 0x5a1008, roughness: 0.2 }), 5, c.diningTop + 0.05, -3.3);
     // the meat locker key, on a hook among the carcasses in the barn
@@ -251,8 +251,8 @@ const supper = {
       for (const id of ['reverend', 'mama', 'doll', 'grandpa']) if (c.cast?.[id]) c.cast[id].visible = false;
       const gp = actor(c, 'grandpa', 9.6, 7.6, 0, 'idle'); gp.faceTo(1.2, 9.3);
       const mama = actor(c, 'mama', 13.2, 3, -Math.PI / 2, 'idle');
-      brother(c, 5, -5); doll(c, 20, 0);
-      c.brother.set('patrol'); c.dollH.set('patrol');
+      brother(c, 37, -9.4); doll(c, 20, 0);
+      c.brother.work = chopWork(37, -9.4, Math.PI, 37, -8); c.brother.set('work'); c.dollH.set('patrol');
       // barks from the porch and the living room
       let t = 15; c.onUpdate(dt => { t -= dt; if (t > 0 || g.dying) return; t = 25 + Math.random() * 20; const h = c.head(); if (Math.hypot(h.x - 13, h.z - 3) < 30) mama.say(pick(['m_comeout', 'm_find'])); else if (Math.hypot(h.x - 9, h.z - 7) < 14) gp.say('g_bet'); });
       await c.until(() => c.has('keys'));

@@ -11,32 +11,20 @@ VR can cause motion sickness: use snap turn, teleport and the comfort vignette i
 
 **In VR, holding both grip buttons for 2 seconds always opens the pause / exit menu.** On desktop press Esc.
 
-## The game
-You wake up strapped into a barber chair. A woman behind you whispers *shh, there you are*. This family loves you. They have loved
-4,095 of you before. The bodies hanging in the barn are tagged with numbers and they all have your shape: you are copy **4,096**.
+## The game: Route 9, October 1977
+Your radiator dies outside **Jolly Johnny's**: gas, fried chicken and the Museum of Morbid Marvels, run by a grinning
+clown who narrates everything. Your friend Dale goes round back to use the restroom and doesn't come back.
 
-The horror is mostly not the dark. It is the tenderness: a mother who calls you sweetheart while your father works in the barn,
-a sunlit breakfast where the plate changes when you look away, being made to say grace out loud (the game records your voice
-if the microphone is on, keeps it only in memory, and plays it back to you later), and a supper where you are handed a cleaver.
+Four chapters, fully voiced (ElevenLabs), with realistic characters (Sketchfab):
+1. **Jolly Johnny's** — dusk at the station. The restroom. The museum. Johnny is always somewhere behind you.
+2. **The Dead Man's Drive** — a seated VR dark ride through Johnny's exhibits, narrated over a crackling speaker.
+   Nothing chases you. Then the legend climbs off his table.
+3. **Supper** — you wake at the family's table: Mama Ruth, the Reverend, Doll, Grandpa Hollis and Brother, the one who
+   does the carving. Then the game: they count to fifty. Find the keys in the barn, find Dale in the cellar, get him out.
+   Brother hunts you; Doll tattles; Mama calls from the porch. Hide in wardrobes.
+4. **The Corn** — dawn, through the cornfield to the road, with Brother crashing through the stalks behind you.
 
-Six chapters, fully voiced in subtitles (and the browser's speech voice where available), with in-engine cutscenes:
-1. **Home** — waking up. The rules. He leans in and tells you to hold still. Then escape the house.
-2. **Morning** — daylight, birds, breakfast, family photos with a frame for you. Grace. Then he takes you to the barn to watch.
-3. **The Kill Floor** — a baby monitor that picks up the basement. Reach inside the body with your number. Cut the gate chain.
-4. **Supper** — your sister is brought up from the basement. *Pick it up.* You choose: do it, offer your own hand, or watch.
-   The family, Twelve, and the ending all remember which.
-5. **The Basement** — a tape with your voice on it. Twelve, and what she says to you depends on supper. Get her out.
-6. **The Road** — escort her through the yard while everyone hunts you. Then the gate, what's under her sack, and the last choice.
-
-Two endings, each shaded by what you did at supper and whether you said grace. When you die, the next copy wakes up and finds
-your footprints and your body. The family's hunter remembers which wardrobe you hide in, across sessions, and says so.
-
-### How the fear works
-- **He hunts for real**: sight with line of sight, hearing (footsteps, doors, your breathing on the mic), your flashlight beam,
-  chases, searching hiding places, persistent memory. He talks while he hunts.
-- **Hiding** in wardrobes and lockers, watching through the slats.
-- **Physical VR**: yank against straps (slowly, when someone is listening), hold still while he breathes on you, keep your eyes
-  on him at the table, reach into a body bag, bring a cleaver down with your own hand.
+The family are original characters inspired by 1970s grindhouse horror (no sexual content, no real people).
 
 ## Controls
 | | VR (Quest) | Desktop | Gamepad |

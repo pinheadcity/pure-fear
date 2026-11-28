@@ -28,9 +28,9 @@ export function sky(c, top, mid, bottom, sunCol = null) {
   gr.addColorStop(0, top); gr.addColorStop(0.42, mid); gr.addColorStop(0.5, bottom); gr.addColorStop(1, '#050302');
   g.fillStyle = gr; g.fillRect(0, 0, 16, 512);
   const m = new THREE.MeshBasicMaterial({ map: canvasTex(cv), side: THREE.BackSide, fog: false, depthWrite: false, toneMapped: false });
-  const s = new THREE.Mesh(new THREE.SphereGeometry(400, 24, 12), m); s.renderOrder = -10; c.add(s);
+  const s = new THREE.Mesh(new THREE.SphereGeometry(180, 24, 12), m); s.renderOrder = -10; c.add(s);
   c.onUpdate(() => s.position.copy(c.head()));
-  if (sunCol) { const sun = new THREE.Mesh(new THREE.CircleGeometry(18, 24), new THREE.MeshBasicMaterial({ color: sunCol, fog: false, toneMapped: false })); sun.position.set(-260, 25, -250); sun.lookAt(0, 0, 0); s.add(sun); }
+  if (sunCol) { const sun = new THREE.Mesh(new THREE.CircleGeometry(18, 24), new THREE.MeshBasicMaterial({ color: sunCol, fog: false, toneMapped: false })); sun.position.set(-120, 12, -115); sun.lookAt(0, 0, 0); s.add(sun); }
   return s;
 }
 
@@ -38,7 +38,7 @@ export function sky(c, top, mid, bottom, sunCol = null) {
 export function grain(c, amount = 0.07) {
   const { c: cv, g } = textCanvas(128, 128); const t = canvasTex(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(5, 3);
   const im = g.createImageData(128, 128); for (let i = 0; i < im.data.length; i += 4) { const v = Math.random() * 255; im.data[i] = v; im.data[i + 1] = v * 0.95; im.data[i + 2] = v * 0.85; im.data[i + 3] = 255; } g.putImageData(im, 0, 0);
-  const q = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 1.6), new THREE.MeshBasicMaterial({ map: t, transparent: true, opacity: amount, blending: THREE.MultiplyBlending, premultipliedAlpha: true, depthTest: false, fog: false, toneMapped: false }));
+  const q = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 1.6), new THREE.MeshBasicMaterial({ map: t, transparent: true, opacity: amount, depthTest: false, depthWrite: false, fog: false, toneMapped: false }));
   q.position.z = -0.5; q.renderOrder = 2999; c.e.camera.add(q); c.grainQuad = q;
   let k = 0; c.onUpdate(() => { if (++k % 2) { t.offset.set(Math.random(), Math.random()); } });
   const orig = c.dispose.bind(c); c.dispose = () => { q.removeFromParent(); orig(); };
@@ -47,7 +47,7 @@ export function grain(c, amount = 0.07) {
 
 // --------------------------------------------------------------- the lot
 export function buildLot(c) {
-  const asphalt = surf('dirty_concrete', { size: 5, color: 0x8a7a68 }), dirt = surf('dirt_floor', { size: 6, color: 0xb09070 }), planks = surf('weathered_planks', { size: 2.5 }), wood = surf('wood_planks_dirt', { size: 2 });
+  const asphalt = surf('dirty_concrete', { size: 5, color: 0x8a7a68 }), dirt = surf('dirt_floor', { size: 6, color: 0x8a7a6a }), planks = surf('weathered_planks', { size: 2.5 }), wood = surf('wood_planks_dirt', { size: 2 });
   const red = surf('wood_peeling_paint_weathered', { size: 1.5, color: 0xc04030 }), corr = surf('rusty_corrugated_iron', { size: 2.5, rough: 0.7, metal: 0.3 });
   // ground, road, scrub
   c.floor(-70, 55, 70, 145, dirt); c.floor(-70, 118, 70, 130, asphalt);
@@ -90,6 +90,10 @@ export function buildLot(c) {
   place(c, 'echair', 13, 88, Math.PI / 2 + 0.4, 1.7);
   sign(c, 13, 0.3, 89.2, 0.4, ['OLD SPARKY (REPLICA)'], { w: 1.2, h: 0.2, bg: '#e8dcc0', fg: '#1a1a1a', border: '#1a1a1a', font: 'bold 60px Georgia' });
   for (let k = 0; k < 4; k++) c.decal('pool', 12 + Math.random() * 8, 0, 84 + Math.random() * 12, 0.8 + Math.random());
+  c.body(18.5, 84.5, { tag: 'NO. 13' }); c.body(19.8, 86.2, { tag: 'NO. 12' });
+  sign(c, 23.75, 2.4, 92, -Math.PI / 2, ['ROUTE 9 VANISHINGS', '1969 - 1977', 'HAVE YOU SEEN US?'], { w: 2.8, h: 1.6, bg: '#e8dcc0', fg: '#1a1a1a', border: '#1a1a1a', font: i => i === 2 ? 'bold 80px Georgia' : 'bold 100px Georgia' });
+  // inside, the evening light does not reach
+  c.onUpdate(() => { const h = c.head(), inside = h.x > MX0 && h.x < MX1 && h.z > MZ0 && h.z < MZ1, t = inside ? 0.12 : 1.0; c.e.hemi.intensity += (t - c.e.hemi.intensity) * 0.05; c.e.sun.intensity += ((inside ? 0.1 : 1.6) - c.e.sun.intensity) * 0.05; });
   // rest room shack round the back of the station
   c.box(-30, 0, 76, 2.6, 2.6, 0.12, planks, { collide: true }); c.box(-31.3, 0, 77.5, 0.12, 2.6, 3, planks, { collide: true }); c.box(-28.7, 0, 77.5, 0.12, 2.6, 3, planks, { collide: true }); c.box(-30, 2.6, 77.5, 2.8, 0.1, 3.2, corr);
   sign(c, -30, 2.2, 79.1, 0, ['RESTROOM'], { w: 1.2, h: 0.3, bg: '#e8dcc0', fg: '#1a1a1a', border: '#1a1a1a', font: 'bold 80px Georgia' });
@@ -137,7 +141,7 @@ export function buildCorn(c, x0 = 48, x1 = 108, z0 = -34, z1 = 34) {
   for (let i = 0; i < 9; i++) { const y = 470 - i * 48, s = i % 2 ? 1 : -1; g.strokeStyle = ['#7a8a38', '#8a8a40', '#a09048'][i % 3]; g.lineWidth = 9; g.beginPath(); g.moveTo(63, y); g.quadraticCurveTo(63 + s * 50, y - 40, 63 + s * 60, y + 30); g.stroke(); }
   g.fillStyle = '#c8a850'; g.beginPath(); g.ellipse(70, 220, 9, 34, 0.2, 0, 7); g.fill(); g.fillStyle = '#a89050'; g.fillRect(60, 30, 6, 30);
   const tx = canvasTex(cv);
-  const m = new THREE.MeshStandardMaterial({ map: tx, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.9 });
+  const m = new THREE.MeshStandardMaterial({ map: tx, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.9, emissive: 0x3a3418, emissiveMap: tx });
   const one = new THREE.PlaneGeometry(0.9, 2.6); one.translate(0, 1.3, 0);
   const two = one.clone().rotateY(Math.PI / 2);
   const geo = new THREE.BufferGeometry().copy(one); const merged = [one, two];
