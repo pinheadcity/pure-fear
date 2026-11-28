@@ -81,7 +81,9 @@ export class Input {
       s.mx = ax(L, 2); s.my = -ax(L, 3); s.tx = ax(R, 2); s.ty = -ax(R, 3);
       s.use = bt(R, BTN.trigger); s.useL = bt(L, BTN.trigger);
       s.flash = bt(R, BTN.a); s.aux = bt(R, BTN.b) || bt(L, BTN.a);
-      s.run = bt(L, BTN.stick); s.crouch = false;
+      s.run = bt(L, BTN.stick);
+      const yb = bt(L, BTN.b); if (yb && !this._yPrev) this.crouchToggle = !this.crouchToggle; this._yPrev = yb; // Y: crouch toggle
+      s.crouch = !!this.crouchToggle;
       const both = bt(L, BTN.squeeze) && bt(R, BTN.squeeze);
       this.gripHold = both ? this.gripHold + dt : 0;
       if (this.gripHold >= 2) { s.pause = true; this.gripHold = -999; }

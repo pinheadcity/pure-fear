@@ -40,6 +40,7 @@ export class Player {
   }
   update(dt, inp) {
     const e = this.e, s = this.g.settings, st = inp.state;
+    if (e.xr) { const base = this.g.settings.seated ? 0.45 : 0, ty = base - (st.crouch ? 0.55 : 0); if (!this.falling) e.rig.position.y += (ty - e.rig.position.y) * Math.min(1, dt * 8); }
     if (!e.xr) { const target = st.crouch ? 1.05 : 1.65; e.camera.position.y += (target - e.camera.position.y) * Math.min(1, dt * 8); }
     let moved = 0;
     if (this.enabled) {
