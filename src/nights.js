@@ -53,15 +53,21 @@ function bulbs(c, a, b) { if (a) c.bulb(0, ...a); if (b) c.bulb(1, ...b); }
 function sickLight(c, i) { const p = c.e.points[i]; let t = Math.random() * 10; c.onUpdate(dt => { t += dt; p.intensity = p.userData.base * (0.55 + 0.45 * Math.abs(Math.sin(t * 0.37) * Math.sin(t * 0.11 + 1))); }); }
 async function struggle(c, need = 1, { noisy = true, hint = true, quiet = false } = {}) {
   const g = c.g, inp = g.input; let prog = 0, last = 0; const lp = V(0, 0, 0), rp = V(0, 0, 0), plp = V(0, 0, 0), prp = V(0, 0, 0); let init = false;
-  if (hint) g.hud.sub(quiet ? (g.engine.xr ? 'Pull against the straps. Slowly. Hard yanks are loud.' : 'Pull with E / click. Slowly. Fast pulling is loud.') : g.engine.xr ? 'Your wrists are strapped down. Yank your hands, hard.' : 'Your wrists are strapped down. Hammer E / click to pull.', 6);
+  if (hint) g.hud.sub(quiet ? (g.engine.xr ? 'Pull against the straps: yank your hands or pull the triggers. Slowly. Fast is loud.' : 'Pull with E / click. Slowly. Fast pulling is loud.') : g.engine.xr ? 'Your wrists are strapped down. Yank your hands hard, or pull both triggers again and again.' : 'Your wrists are strapped down. Hammer E / click to pull.', 8);
   await c.until(() => {
     let effort = 0;
-    if (g.engine.xr) { inp.handPos('left', lp); inp.handPos('right', rp); if (init) effort = (lp.distanceTo(plp) + rp.distanceTo(prp)) * 6; plp.copy(lp); prp.copy(rp); init = true; }
+    if (g.engine.xr) {
+      // hand speed in m/s, both hands. A firm yank is ~1-3 m/s. Trigger pulls count too.
+      inp.handPos('left', lp); inp.handPos('right', rp);
+      if (init && c.dt > 0) { const sp = (lp.distanceTo(plp) + rp.distanceTo(prp)) / c.dt; effort = sp > 0.7 ? Math.min(2, sp / 1.5) * c.dt * 9 : 0; }
+      plp.copy(lp); prp.copy(rp); init = true;
+      if (inp.pressed('use') || inp.pressed('useL')) { effort = Math.max(effort, c.timeT - (c._lastPull || 0) < 0.3 ? 1.5 : 0.9); c._lastPull = c.timeT; }
+    }
     else if (inp.pressed('use') || inp.pressed('useL')) { effort = c.timeT - (c._lastPull || 0) < 0.3 ? 1.5 : 0.9; c._lastPull = c.timeT; }
-    if (effort > 0.25) { prog += Math.min(effort, 1.2) * 0.035; g.player.noise = Math.max(g.player.noise, quiet ? Math.min(1, effort * 0.6) : noisy ? Math.min(1, effort) : 0.2); if (c.timeT - last > 0.35) { last = c.timeT; g.audio.play(['door7', 'door3'], g.engine.headPos(V(0, 0, 0)).setY(0.8), { vol: 0.5, rate: 0.7 + Math.random() * 0.3 }); } }
+    if (effort > 0.05) { prog += Math.min(effort, 1.2) * 0.035; g.hud.extra = 'STRAPS ' + '|'.repeat(Math.round(Math.min(1, prog / need) * 20)).padEnd(20, '.'); g.hud.dirty = true; g.player.noise = Math.max(g.player.noise, quiet ? Math.min(1, effort * 0.6) : noisy ? Math.min(1, effort) : 0.2); if (c.timeT - last > 0.35) { last = c.timeT; g.audio.play(['door7', 'door3'], g.engine.headPos(V(0, 0, 0)).setY(0.8), { vol: 0.5, rate: 0.7 + Math.random() * 0.3 }); } }
     return prog >= need;
   });
-  g.audio.play('door2', null, { vol: 0.8, rate: 0.6 });
+  g.audio.play('door2', null, { vol: 0.8, rate: 0.6 }); g.hud.extra = ''; g.hud.dirty = true;
 }
 // make you look at something. Looking away is noticed.
 async function watch(c, target, seconds, { who = 'FATHER', lines = ['Look at me.', 'Eyes up.', 'Watch.'], strikes = 99, onStrike } = {}) {
