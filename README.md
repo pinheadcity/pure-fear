@@ -47,6 +47,7 @@ your footprints and your body. The family's hunter remembers which wardrobe you 
 | Flashlight | A | F | X or RB |
 | Run | Left stick click | Shift | LB |
 | Crouch (quieter) | Crouch physically | C | B |
+| Skip a line of dialogue | B or X | R or Enter | — |
 | Pause | Hold both grips 2 s | Esc | Start |
 
 Options include spoken dialogue on/off and the microphone ("they hear you").

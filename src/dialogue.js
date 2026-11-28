@@ -41,7 +41,14 @@ export class Dialogue {
         this.synth.speak(u);
       } catch (e) { }
     }
-    return new Promise(res => { const t0 = performance.now(); const tick = () => { if (!g.ctx || g.dying) return res(); if (performance.now() - t0 > dur * 1000 || (ended && performance.now() - t0 > 1200)) return res(); requestAnimationFrame(tick); }; tick(); });
+    // NOTE: window.requestAnimationFrame does not run during an immersive WebXR session, so this waits on the game's own clock.
+    return new Promise(res => {
+      let t = 0, done = false; const fin = () => { if (!done) { done = true; res(); } };
+      this.skip = false;
+      const tick = () => { if (done) return; if (!g.ctx || g.dying || this.skip) { this.skip = false; try { this.synth && this.synth.cancel(); } catch (e) { } return fin(); } t += 0.1; if (t >= dur || (ended && t > 1.2)) return fin(); g.after(0.1, tick); };
+      g.after(0.1, tick);
+      setTimeout(fin, (dur + 30) * 1000); // safety net
+    });
   }
   bark(who, lines, pos) { if (this.g.hud.subT > 0.5) return; return this.say(who, lines[(Math.random() * lines.length) | 0], { pos, hold: 0.2 }); }
   stop() { try { this.synth && this.synth.cancel(); } catch (e) { } }

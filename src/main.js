@@ -180,6 +180,7 @@ class Game {
   frame() {
     const dt = Math.min(0.05, this.clock.getDelta()), inp = this.input, e = this.engine;
     inp.update(dt);
+    if (inp.pressed('aux') && !this.panel.open) this.dialogue.skip = true;
     if (inp.pressed('pause')) { if (this.state === 'play') this.pause(); else if (this.state === 'pause') this.resume(); }
     if (this.state !== 'pause') for (let i = this.timers.length - 1; i >= 0; i--) { const t = this.timers[i]; t.t -= dt; if (t.t <= 0) { this.timers.splice(i, 1); t.fn(); } }
     if (this.state === 'play' || this.state === 'menu') {

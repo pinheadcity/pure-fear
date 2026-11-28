@@ -93,7 +93,7 @@ export class Input {
       s.tx = (k.has('ArrowRight') ? 1 : 0) - (k.has('ArrowLeft') ? 1 : 0);
       s.use = k.has('KeyE') || (this.mouse.down && this.locked);
       s.useL = this.mouse.clicked && !this.locked;
-      s.flash = k.has('KeyF'); s.aux = k.has('KeyR');
+      s.flash = k.has('KeyF'); s.aux = k.has('KeyR') || k.has('Enter');
       s.run = k.has('ShiftLeft') || k.has('ShiftRight'); s.crouch = k.has('KeyC') || k.has('ControlLeft');
       s.pause = k.has('Escape') || k.has('KeyP') || k.has('Tab');
       this.mouse.clicked = false;
