@@ -24,5 +24,7 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .
+      - name: Let the artifact settle (avoids a flaky 'artifact not found' on deploy)
+        run: sleep 20
       - id: deployment
         uses: actions/deploy-pages@v4
