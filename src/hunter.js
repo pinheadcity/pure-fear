@@ -116,11 +116,11 @@ export function syncExtras(ch, scene) {
 
 // ---------- the hunter ----------
 export class Hunter {
-  constructor(game, { model = 'Xbot', nav, walk = 1.15, run = 2.55, sight = 13, fov = 115, hearing = 15, scale = 1.1, apron = true, name = 'HIM', voice = ['c_troll1', 'c_troll2', 'c_troll3'] } = {}) {
-    this.g = game; this.nav = nav; this.name = name;
-    this.ch = dress(character(model), { apron, scale, recolor: model === 'Xbot' });
-    this.root = this.ch.root; game.engine.world.add(this.root);
-    this.mixer = this.ch.mixer; this.acts = this.ch.actions; this.cur = null; this.play('idle');
+  constructor(game, { model = 'Xbot', actor = null, harmless = false, nav, walk = 1.15, run = 2.55, sight = 13, fov = 115, hearing = 15, scale = 1.1, apron = true, name = 'HIM', voice = ['c_troll1', 'c_troll2', 'c_troll3'] } = {}) {
+    this.g = game; this.nav = nav; this.name = name; this.actor = actor; this.harmless = harmless;
+    if (actor) { this.ch = { root: actor.root, extras: [] }; this.root = actor.root; this.mixer = { update: dt => actor.update(dt) }; this.headH = actor.height * 0.93; }
+    else { this.ch = dress(character(model), { apron, scale, recolor: model === 'Xbot' }); this.root = this.ch.root; game.engine.world.add(this.root); this.mixer = this.ch.mixer; this.acts = this.ch.actions; this.headH = 1.75 * scale; }
+    this.cur = null; this.play('idle');
     this.pos = this.root.position; this.yaw = 0;
     this.walkSpeed = walk; this.runSpeed = run; this.sight = sight; this.fov = fov; this.hearing = hearing; this.voice = voice;
     this.state = 'idle'; this.path = []; this.target = null; this.lastSeen = new THREE.Vector3(); this.lastHeard = new THREE.Vector3();
@@ -129,12 +129,13 @@ export class Hunter {
     this.work = null; this.seenEnter = null; this.lostT = 0; this.aggro = 0;
   }
   play(name, fade = 0.35, ts = 1) {
+    if (this.actor) return this.actor.play(name, fade, ts);
     const a = this.acts[name] || this.acts.idle; if (!a) return;
     a.timeScale = ts; if (this.cur === a) return;
     a.reset().fadeIn(fade).play(); if (this.cur) this.cur.fadeOut(fade); this.cur = a;
   }
   place(x, z, yaw = 0) { this.pos.set(x, 0, z); this.yaw = yaw; this.root.rotation.y = yaw + Math.PI; this.path = []; }
-  get head() { return _b.set(this.pos.x, 1.75 * this.root.scale.x, this.pos.z); }
+  get head() { return _b.set(this.pos.x, this.headH, this.pos.z); }
   say(name, vol = 0.9) { this.g.audio.play(name || this.voice, this.head.clone(), { vol, ref: 2 }); }
   // ----- senses -----
   canSee() {
@@ -219,7 +220,7 @@ export class Hunter {
         this.running = true; this.play('run', 0.2, 1.05);
         if (sees) {
           this.lostT = 0; this.path = [new THREE.Vector3(p.x, 0, p.z)];
-          if (dist < 0.9) { this.grab(); break; }
+          if (dist < (this.harmless ? 1.6 : 0.9)) { if (this.harmless) { this.onTag && this.onTag(); this.set('idle'); this.t = -6; break; } this.grab(); break; }
         } else {
           this.lostT += dt;
           if (g.hidden && this.seenEnter === g.hidden) { this.path = [g.hidden.front.clone()]; if (Math.hypot(g.hidden.front.x - this.pos.x, g.hidden.front.z - this.pos.z) < 0.6) { this.openSpot(g.hidden, true); break; } }

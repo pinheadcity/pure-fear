@@ -5,6 +5,8 @@ import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 
 const texLoader = new THREE.TextureLoader();
 const gltfLoader = new GLTFLoader();
+import { VO_IDS } from './lines.js';
+export const CHARS = ['clown', 'reverend', 'mama', 'doll', 'dale', 'victim', 'butcher', 'grandpa', 'carcass', 'station', 'pump', 'car', 'truck', 'echair'];
 const ROUGH = new Set(['decrepit_wallpaper', 'dirty_tiles', 'dirty_concrete', 'rusty_metal_02', 'rusty_corrugated_iron', 'wood_planks_dirt', 'weathered_planks', 'worn_cracked_plaster', 'dirt_floor', 'muddy_tracks', 'dirty_carpet', 'metal_grate_rusty', 'wood_peeling_paint_weathered', 'peeling_painted_wall', 'denim_fabric', 'brown_leather']);
 const texCache = new Map(), matCache = new Map(), gltfCache = new Map(), sndCache = new Map();
 
@@ -38,8 +40,8 @@ export function surf(name, { size = 2, color = 0xffffff, rough = 0.92, metal = 0
 }
 
 export async function loadModels(onProgress) {
-  let n = 0; const all = [...MODELS, 'Xbot', 'XbotLow', 'Michelle'];
-  await Promise.all(all.map(name => gltfLoader.loadAsync(`assets/mdl/${name}.glb`).then(g => {
+  let n = 0; const all = [...MODELS, 'Xbot', 'XbotLow', ...CHARS];
+  await Promise.all(all.map(name => gltfLoader.loadAsync(CHARS.includes(name) ? `assets/chars/${name}.glb` : `assets/mdl/${name}.glb`).then(g => {
     g.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
     gltfCache.set(name, g); onProgress && onProgress(++n / all.length);
   }).catch(e => console.warn('model', name, e))));
@@ -62,8 +64,8 @@ export function character(name) {
 }
 
 export async function loadSounds(ctx, onProgress) {
-  let n = 0;
-  await Promise.all(SOUNDS.map(name => fetch(`assets/snd/${name}.ogg`).then(r => r.arrayBuffer()).then(b => ctx.decodeAudioData(b)).then(buf => { sndCache.set(name, buf); onProgress && onProgress(++n / SOUNDS.length); }).catch(e => console.warn('snd', name, e))));
+  let n = 0; const all = [...SOUNDS, ...VO_IDS.map(i => 'vo_' + i)];
+  await Promise.all(all.map(name => fetch(name.startsWith('vo_') ? `assets/vo/${name.slice(3)}.ogg` : `assets/snd/${name}.ogg`).then(r => r.arrayBuffer()).then(b => ctx.decodeAudioData(b)).then(buf => { sndCache.set(name, buf); onProgress && onProgress(++n / all.length); }).catch(e => console.warn('snd', name, e))));
 }
 export function sound(name) { return sndCache.get(name); }
 export const gltf = name => gltfCache.get(name);

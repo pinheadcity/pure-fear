@@ -56,7 +56,7 @@ class Game {
     for (const h of [...this.hunters, ...this.watchers]) for (const e of h.ch?.extras || []) e.mesh.removeFromParent();
     this.engine.clearWorld(); this.hunters = []; this.watchers = []; this.timers.length = 0;
     this.player.floorCheck = null; this.player.enabled = true; this.flashAllowed = true; this.flashDim = 1; this.player.inventory.clear();
-    this.dialogue.stop(); this.audio.birds(false); this.player.speed = 1.6; this.hud.subtitle = ''; this.hud.subT = 0;
+    this.onSpotted = null; this.dialogue.stop(); this.audio.birds(false); this.player.speed = 1.6; this.hud.subtitle = ''; this.hud.subT = 0;
     this.panel.hide(); this.modal = null; this.reader.hide(); this.exitHide(true); this.dread = 0; this.audio.setDread(0); this.audio.heartRate = 0; this.audio.ambience(null);
     this.engine.fadeMesh.material.color.set(0); this.hudPrompt = null;
   }
@@ -81,7 +81,7 @@ class Game {
     items.push({ label: 'CHAPTERS', fn: () => this.panel.show({ title: 'CHAPTERS', items: [...NIGHTS.map((n, i) => ({ label: `${i + 1}. ${n.title}`, disabled: !(unlockAll || i < s.unlocked), fn: () => this.loadNight(i, 0) })), { label: 'BACK', fn: () => this.mainMenu() }], top: 140 }, false) });
     items.push({ label: 'OPTIONS', fn: () => this.optionsMenu(() => this.mainMenu()) });
     if (xr) items.push({ label: 'EXIT VR', fn: () => this.engine.renderer.xr.getSession()?.end() });
-    this.panel.show({ title: 'PURE FEAR', body: `THE PROCESSING\nCopies processed: ${4096 + s.restores}\nPoint and pull the trigger. Hold both grips 2s to pause.`, items, top: 260, footer: 'adults only. headphones. turn the lights off.' });
+    this.panel.show({ title: 'PURE FEAR', body: `ROUTE 9, OCTOBER 1977\nTimes caught: ${s.restores}\nPoint and pull the trigger. Hold both grips 2s to pause.`, items, top: 260, footer: 'adults only. headphones. turn the lights off.' });
   }
   optionsMenu(back) {
     const S = this.settings, w = () => this.save.write();
@@ -134,7 +134,7 @@ class Game {
       this.state = 'menu';
       if (i >= NIGHTS.length - 1) {
         this.save.d.inProgress = false; this.save.write();
-        const st = this.save.d.story || {}, E = (ENDINGS[st.ending] || ENDINGS.home)(st, 4095 + this.save.d.restores);
+        const st = this.save.d.story || {}, E = (ENDINGS[this.ctx?.flags?.ending] || Object.values(ENDINGS)[0])(st, this.save.d.restores);
         return this.panel.show({ title: E.title, body: E.text, items: [{ label: 'MENU', fn: () => { this.engine.setFade(0); this.toMenu(); } }], top: 760 }, true);
       }
       this.panel.show({ title: NIGHTS[i].title, body: `Copies processed so far: ${4096 + this.save.d.restores}\n\nNext: ${NIGHTS[i + 1].title}`, items: [{ label: 'CONTINUE', fn: () => this.loadNight(i + 1, 0) }, { label: 'MENU', fn: () => { this.engine.setFade(0); this.toMenu(); } }], top: 400 }, true);
@@ -170,12 +170,12 @@ class Game {
     this.exitHide(true); this.player.enabled = false; this.reader.hide(); this.panel.hide();
     // it is right in front of your face
     const f = e.headDir(new THREE.Vector3()); f.y = 0; if (f.lengthSq() < 1e-4) f.set(0, 0, -1); f.normalize();
-    if (h && h.place) { h.place(hp.x + f.x * 0.55, hp.z + f.z * 0.55, Math.atan2(f.x, f.z)); h.enabled = false; h.play('idle', 0.05); }
-    this.audio.play(['c_grunt4', 'c_grunt5'], hp.clone().addScaledVector(f, 0.5), { vol: 1.4, ref: 0.6 });
-    this.audio.play('sting2', null, { vol: 1 });
-    this.after(0.7, () => { this.audio.play(['thud1', 'thud4'], null, { vol: 1.4 }); this.engine.setFade(0.85, 0x2a0000); this.engine.fade = 0.85; });
-    this.after(1.2, () => { this.audio.play('rip1', null, { vol: 1.1, offset: 2 + Math.random() * 10, dur: 3.5 }); this.audio.play(['wet1', 'wet6', 'meat4'], null, { vol: 1.2 }); });
-    this.after(2.2, () => { this.engine.setFade(1, 0x000000); this.hud.msg(`PROCESSED. COPY ${4095 + this.save.d.restores}.`, 3.5, 'warn'); });
+    if (h && h.place) { h.place(hp.x + f.x * 0.55, hp.z + f.z * 0.55, Math.atan2(f.x, f.z)); h.enabled = false; if (h.actor) h.actor.play('swing', 0.05, 1, true); else h.play('idle', 0.05); }
+    this.audio.play(['c_grunt4', 'c_grunt5'], hp.clone().addScaledVector(f, 0.5), { vol: 0.8, ref: 0.6 });
+    this.audio.play('sting2', null, { vol: 0.55 });
+    this.after(0.7, () => { this.audio.play(['thud1', 'thud4'], null, { vol: 0.85 }); this.engine.setFade(0.85, 0x2a0000); this.engine.fade = 0.85; });
+    this.after(1.2, () => { this.audio.play('rip1', null, { vol: 0.6, offset: 2 + Math.random() * 10, dur: 2.5 }); this.audio.play(['wet1', 'wet6', 'meat4'], null, { vol: 0.7 }); });
+    this.after(2.2, () => { this.engine.setFade(1, 0x000000); this.hud.msg('BROTHER GOT YOU', 3.5, 'warn'); });
     this.after(5, () => { this.dying = false; this.loadNight(this.nightIndex, this.ctx?.stage || 0); });
   }
   // ---------- frame ----------
