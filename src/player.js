@@ -62,6 +62,17 @@ export class Player {
         _v.multiplyScalar(sp * dt);
         e.rig.position.add(_v); moved = _v.length();
       }
+      // ARM SWING: swing your arms like walking; faster swings, faster walk (toward where you look)
+      if (s.armSwing && e.xr && inp.hands.left && inp.hands.right) {
+        const yl = inp.hands.left.grip.position.y, yr = inp.hands.right.grip.position.y;
+        if (this._swY) {
+          const sw = (Math.abs(yl - this._swY[0]) + Math.abs(yr - this._swY[1])) / 2 / Math.max(dt, 1e-3);
+          const target = Math.max(0, Math.min(2.6, (sw - 0.35) * 1.6)) * (st.crouch ? 0.5 : 1);
+          this._swV = (this._swV || 0) + (target - (this._swV || 0)) * Math.min(1, dt * 4);
+          if (this._swV > 0.02) { e.rig.position.addScaledVector(_f, this._swV * dt); moved += this._swV * dt; }
+        }
+        this._swY = [yl, yr];
+      } else { this._swY = null; this._swV = 0; }
     }
     // collision on the head position (also blocks room-scale walking into walls)
     e.rig.updateMatrixWorld(true);

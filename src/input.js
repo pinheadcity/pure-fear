@@ -82,7 +82,7 @@ export class Input {
       s.use = bt(R, BTN.trigger); s.useL = bt(L, BTN.trigger);
       s.flash = bt(R, BTN.a); s.aux = bt(R, BTN.b) || bt(L, BTN.a);
       s.run = bt(L, BTN.stick);
-      const yb = bt(L, BTN.b); if (yb && !this._yPrev) this.crouchToggle = !this.crouchToggle; this._yPrev = yb; // Y: crouch toggle
+      const yb = bt(L, BTN.b); if (yb && !this._yPrev && this.crouchButton !== false) this.crouchToggle = !this.crouchToggle; this._yPrev = yb; if (this.crouchButton === false) this.crouchToggle = false; // Y: crouch toggle
       s.crouch = !!this.crouchToggle;
       const both = bt(L, BTN.squeeze) && bt(R, BTN.squeeze);
       this.gripHold = both ? this.gripHold + dt : 0;

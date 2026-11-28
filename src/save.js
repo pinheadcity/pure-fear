@@ -2,7 +2,7 @@
 const KEY = 'purefear.save.v2';
 const DEF = () => ({
   chapter: 0, stage: 0, inProgress: false, unlocked: 1, completed: [], fragments: {}, deepBest: 0, restores: 0,
-  ending: null, settings: { turn: 'snap', snapAngle: 45, loco: 'smooth', seated: false, vignette: true, mic: false, volume: 1 },
+  ending: null, settings: { turn: 'snap', snapAngle: 45, loco: 'smooth', seated: false, vignette: true, mic: false, volume: 1, armSwing: false, crouchButton: true },
   memory: {}, story: {}, // things the game remembers across sessions (e.g. the first code you were shown)
 });
 export class Save {

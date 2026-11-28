@@ -19,7 +19,7 @@ class Game {
     this.save = new Save();
     this.engine = new Engine();
     this.audio = new Audio(); this.audio.volume = this.settings.volume; this.audio.sampleFn = sound;
-    this.input = new Input(this.engine); this.dialogue = new Dialogue(this);
+    this.input = new Input(this.engine); this.dialogue = new Dialogue(this); this.input.crouchButton = this.settings.crouchButton;
     this.player = new Player(this);
     this.hud = new HUD(this); this.panel = new Panel(this); this.reader = new Reader(this); this.vignette = new Vignette(this);
     this.state = 'title'; this.ctx = null; this.timers = []; this.hunters = []; this.watchers = []; this.flashAllowed = true; this.flashDim = 1;
@@ -85,16 +85,18 @@ class Game {
   }
   optionsMenu(back) {
     const S = this.settings, w = () => this.save.write();
-    this.panel.show({ title: 'OPTIONS', top: 110, bh: 60, items: [
+    this.panel.show({ title: 'OPTIONS', top: 120, bh: 62, cols: 2, items: [
       { label: () => 'TURN: ' + S.turn.toUpperCase(), fn: () => { S.turn = S.turn === 'snap' ? 'smooth' : 'snap'; w(); } },
       { label: () => 'SNAP ANGLE: ' + S.snapAngle, fn: () => { S.snapAngle = S.snapAngle === 45 ? 30 : S.snapAngle === 30 ? 90 : 45; w(); } },
       { label: () => 'MOVE: ' + S.loco.toUpperCase(), fn: () => { S.loco = S.loco === 'smooth' ? 'teleport' : 'smooth'; w(); } },
-      { label: () => 'SEATED MODE: ' + (S.seated ? 'ON' : 'OFF'), fn: () => { S.seated = !S.seated; w(); } },
-      { label: () => 'COMFORT VIGNETTE: ' + (S.vignette ? 'ON' : 'OFF'), fn: () => { S.vignette = !S.vignette; w(); } },
-      { label: () => 'THEY HEAR YOU (MIC): ' + (S.mic ? 'ON' : 'OFF'), fn: async () => { if (!S.mic) { S.mic = await this.audio.enableMic(); } else { this.audio.disableMic(); S.mic = false; } w(); this.panel.render(); } },
-      { label: () => 'SPOKEN DIALOGUE: ' + (S.voices === false ? 'OFF' : 'ON'), fn: () => { S.voices = S.voices === false; w(); } },
+      { label: () => 'ARM SWING: ' + (S.armSwing ? 'ON' : 'OFF'), fn: () => { S.armSwing = !S.armSwing; w(); } },
+      { label: () => 'Y CROUCH: ' + (S.crouchButton === false ? 'OFF' : 'ON'), fn: () => { S.crouchButton = S.crouchButton === false; this.input.crouchButton = S.crouchButton; w(); } },
+      { label: () => 'SEATED: ' + (S.seated ? 'ON' : 'OFF'), fn: () => { S.seated = !S.seated; w(); } },
+      { label: () => 'VIGNETTE: ' + (S.vignette ? 'ON' : 'OFF'), fn: () => { S.vignette = !S.vignette; w(); } },
+      { label: () => 'MIC: ' + (S.mic ? 'ON' : 'OFF'), fn: async () => { if (!S.mic) { S.mic = await this.audio.enableMic(); } else { this.audio.disableMic(); S.mic = false; } w(); this.panel.render(); } },
+      { label: () => 'VOICES: ' + (S.voices === false ? 'OFF' : 'ON'), fn: () => { S.voices = S.voices === false; w(); } },
       { label: () => 'VOLUME: ' + Math.round(S.volume * 100) + '%', fn: () => { S.volume = S.volume >= 1 ? 0.5 : S.volume + 0.25; this.audio.setVolume(S.volume); w(); } },
-      { label: 'ERASE PROGRESS', fn: () => { this.save.reset(); this.toMenu(); } },
+      { label: 'ERASE SAVE', fn: () => { this.save.reset(); this.toMenu(); } },
       { label: 'BACK', fn: back },
     ] }, false);
   }

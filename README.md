@@ -41,16 +41,16 @@ your footprints and your body. The family's hunter remembers which wardrobe you 
 ## Controls
 | | VR (Quest) | Desktop | Gamepad |
 |---|---|---|---|
-| Move | Left stick (or teleport) | WASD | Left stick |
+| Move | Left stick (or teleport, or ARM SWING: swing your arms like walking) | WASD | Left stick |
 | Turn / look | Right stick (snap/smooth) | Mouse | Right stick |
 | Use / hide / reach in (hold) | Trigger | E / click | A or RT |
 | Flashlight | A | F | X or RB |
 | Run | Left stick click | Shift | LB |
-| Crouch (quieter, slower, harder to see) | Y (toggle) or crouch physically | C | B |
+| Crouch (quieter, slower, harder to see) | Y toggle (can be turned off) or crouch physically | C | B |
 | Skip a line of dialogue | B or X | R or Enter | — |
 | Pause | Hold both grips 2 s | Esc | Start |
 
-Options include spoken dialogue on/off and the microphone ("they hear you").
+Options include arm-swing walking on/off, the Y crouch button on/off, spoken dialogue on/off and the microphone ("they hear you").
 
 `?unlock=all` in the URL unlocks every night for testing.
 
