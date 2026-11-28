@@ -107,10 +107,21 @@ export class Ctx {
   ceil(x0, z0, x1, z1, m, h) { this.b.box((x0 + x1) / 2, h, (z0 + z1) / 2, x1 - x0, 0.08, z1 - z0, m); }
   add(o) { this.world.add(o); return o; }
   mesh(geo, m, x = 0, y = 0, z = 0, ry = 0) { const me = new THREE.Mesh(geo, m); me.position.set(x, y, z); me.rotation.y = ry; this.world.add(me); return me; }
-  prop(name, x, y, z, ry = 0, s = 1, col = null) {
-    const o = prop(name, s); o.position.set(x, y, z); o.rotation.y = ry; this.world.add(o);
-    if (col) { const [w, d] = col; const c = Math.abs(Math.cos(ry)), sn = Math.abs(Math.sin(ry)), hw = (w * c + d * sn) / 2, hd = (w * sn + d * c) / 2; this.e.colliders.add(x - hw, z - hd, x + hw, z + hd, 'low'); }
+  // place a scanned prop so its real base sits on surface height y (models have arbitrary pivots).
+  // lie: lay a long tool flat. wall: y is the centre (hung on a wall). col: 'auto' footprint, [w,d], or false.
+  prop(name, x, y, z, ry = 0, s = 1, col = 'auto', { lie = false, wall = false } = {}) {
+    const o = prop(name, s); o.rotation.set(lie ? -Math.PI / 2 : 0, ry, 0, 'YXZ'); o.position.set(x, 0, z); this.world.add(o);
+    const bb = this.ground(o, y, wall);
+    const h = bb.max.y - bb.min.y;
+    if (Array.isArray(col)) { const [w, d] = col; const c = Math.abs(Math.cos(ry)), sn = Math.abs(Math.sin(ry)), hw = (w * c + d * sn) / 2, hd = (w * sn + d * c) / 2; this.e.colliders.add(x - hw, z - hd, x + hw, z + hd, 'low'); }
+    else if (col === 'auto' && !wall && !lie && y < 0.05 && h > 0.3) { const m = 0.04; this.e.colliders.add(bb.min.x + m, bb.min.z + m, bb.max.x - m, bb.max.z - m, h > 1.6 ? undefined : 'low'); }
     return o;
+  }
+  // set an object's lowest point to height y (or its centre, for wall-hung things); returns its world box
+  ground(o, y, centre = false) {
+    o.updateMatrixWorld(true); const bb = new THREE.Box3().setFromObject(o);
+    o.position.y += centre ? y - (bb.min.y + bb.max.y) / 2 : y - bb.min.y; o.updateMatrixWorld(true);
+    return bb.setFromObject(o);
   }
   decal(kind, x, y, z, size = 1, { rot = Math.random() * 6.28, wall = null } = {}) {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(size, size), decal(kind));
@@ -159,7 +170,7 @@ export class Ctx {
     return it;
   }
   pickup(obj, x, y, z, id, label, onTake) {
-    obj.position.set(x, y, z); this.world.add(obj);
+    obj.position.set(x, 0, z); this.world.add(obj); this.ground(obj, y);
     const it = this.interact(obj, 'take ' + label, () => {
       obj.removeFromParent(); this.removeInteract(it); this.g.player.inventory.add(id);
       this.g.hud.msg(label.toUpperCase(), 2.5); this.g.audio.play('door3', null, { vol: 0.4, rate: 1.6 });
@@ -324,16 +335,16 @@ export function buildCompound(c, opt = {}) {
     basement: c.door(-12, 1.5, { axis: 'z', w: 1.0, locked: { msg: 'PADLOCKED. SOMEONE IS COUGHING BEHIND IT.' } }),
   };
   // kitchen: the chair, the table, the sink
-  c.prop('BarberShopChair_01', -7, 0, -6.2, 0, 1, [0.8, 0.9]);
+  c.prop('BarberShopChair_01', -7, 0, -6.2, 0, 1, false);
   c.decal('pool', -7, 0, -6.2, 2.2); c.decal('smear', -9, 0, -3, 1.6); c.decal('drip', -11.88, 1.2, -6, 1.6, { wall: Math.PI / 2 });
-  c.prop('WoodenTable_01', -4.2, 0, -8.5, 0, 1, [1.6, 0.9]); c.prop('rusted_hacksaw', -4.4, 0.78, -8.4, 0.4); c.prop('handsaw_wood', -3.8, 0.78, -8.7, 2);
-  c.decal('pool', -4.2, 0.785, -8.5, 0.9);
+  c.prop('WoodenTable_01', -4.2, 0, -8.5, 0); c.prop('rusted_hacksaw', -4.4, 0.555, -8.4, 0.4); c.prop('handsaw_wood', -3.8, 0.555, -8.7, 2);
+  c.decal('pool', -4.2, 0.553, -8.5, 0.9);
   c.box(-11.4, 0, -4, 1.2, 0.9, 3, metal, { collide: true }); c.prop('wooden_bucket_01', -10.8, 0, -1.2, 0); c.decal('pool', -10.8, 0, -1.6, 0.8);
   // dining: the long table
-  c.prop('dining_table', 5, 0, -5, Math.PI / 2, 1.2, [1.2, 2.6]);
-  [[3.9, -6], [3.9, -4], [6.1, -6], [6.1, -4], [5, -7.6], [5, -2.4]].forEach(([x, z], i) => c.prop('painted_wooden_chair_01', x, 0, z, [Math.PI / 2, Math.PI / 2, -Math.PI / 2, -Math.PI / 2, 0, Math.PI][i]));
-  c.prop('Television_01', 11, 0, -9, -0.6, 1); c.prop('bull_head', 2, 1.9, -9.85, 0, 1);
-  c.decal('smear', 5, 0.88, -5, 1.2, { rot: 0.3 });
+  { const dt = c.prop('dining_table', 5, 0, -5, Math.PI / 2, 1.15); c.diningTop = new THREE.Box3().setFromObject(dt).max.y; }
+  [[3.9, -6], [3.9, -4], [6.1, -6], [6.1, -4], [5, -7.6], [5, -2.4]].forEach(([x, z], i) => c.prop('painted_wooden_chair_01', x, 0, z, [Math.PI / 2, Math.PI / 2, -Math.PI / 2, -Math.PI / 2, 0, Math.PI][i], 1, i >= 4 ? false : 'auto'));
+  c.prop('Television_01', 11, 0, -9, -0.6, 1); c.prop('bull_head', 2, 1.9, -9.78, 0, 1, false, { wall: true });
+  c.decal('smear', 5, c.diningTop, -5, 1.2, { rot: 0.3 });
   // bedroom: grandmother
   c.prop('Rockingchair_01', -10, 0, 8.5, 2.6, 1, [0.8, 1]); c.box(-3, 0, 8.6, 2, 0.5, 2.6, surf('dirty_carpet', { size: 1 }), { collide: true, low: true });
   c.decal('words', -11.88, 1.6, 6, 1.4, { wall: Math.PI / 2 });
@@ -343,11 +354,11 @@ export function buildCompound(c, opt = {}) {
   c.decal('print', -9, 0, 1.5, 0.35, { rot: Math.PI / 2 }); c.decal('print', -10, 0, 1.4, 0.35, { rot: Math.PI / 2 }); c.decal('hand', -11.88, 1.1, 2.2, 0.5, { wall: Math.PI / 2 });
   c.decal('drip', 11.88, 1.3, 2.4, 1.2, { wall: -Math.PI / 2 });
   // clutter: a lived-in house
-  c.prop('vintage_oil_lamp', -3.7, 0.78, -8.7, 0.3); c.prop('wooden_stool_01', -5.6, 0, -9.2, 0.7, 1, [0.4, 0.4]); c.prop('metal_toolbox', -11.3, 0.9, -5.2, 1.5);
-  c.prop('old_gas_mask', -2.2, 1.55, -8.2, -Math.PI / 2); c.prop('cardboard_box_01', -10.9, 0, -9.3, 0.2, 1, [0.6, 0.5]); c.prop('cardboard_box_01', -10.6, 0.45, -9.25, 0.9);
+  c.prop('vintage_oil_lamp', -3.7, 0.555, -8.3, 0.3, 1, false); c.prop('wooden_stool_01', -5.6, 0, -9.2, 0.7, 1, [0.4, 0.4]); c.prop('metal_toolbox', -11.3, 0.9, -5.2, 1.5, 1, false);
+  c.prop('old_gas_mask', -2.25, 1.55, -8.2, -Math.PI / 2, 1, false, { wall: true }); c.prop('cardboard_box_01', -10.9, 0, -9.3, 0.2, 1, [0.6, 0.5]); c.prop('cardboard_box_01', -10.9, 0.34, -9.3, 0.9, 1, false);
   c.prop('wooden_lantern_01', 11.3, 0, 2.6, 0); c.prop('propane_tank', -11.4, 0, 2.7, 0, 0.8);
   c.prop('Television_01', 1.2, 0, 9.3, Math.PI, 1, [0.8, 0.6]); c.prop('cardboard_box_01', 4, 0, 9.4, 1.2, 1, [0.6, 0.5]); c.prop('wooden_crate_01', 10.6, 0, 3.8, 0.6, 1, [0.8, 0.8]);
-  c.prop('wooden_bucket_01', -1.2, 0, 9.4, 0); c.prop('vintage_oil_lamp', -3.3, 0.5, 7.6, 1);
+  c.prop('wooden_bucket_01', -1.2, 0, 9.4, 0); c.prop('vintage_oil_lamp', -3, 0.5, 8.0, 1, 1, false);
   // rugs, shelves, curtains
   const rug = surf('dirty_carpet', { size: 1.2, color: 0x8a6a5a });
   c.box(-6, 0.005, 6.5, 3, 0.01, 2, rug); c.box(6, 0.005, 6.5, 3.2, 0.01, 2.2, rug); c.box(5, 0.005, -5, 3.4, 0.01, 4.6, surf('dirty_carpet', { size: 1.4, color: 0x6a5048 }));
@@ -382,13 +393,16 @@ export function buildCompound(c, opt = {}) {
   c.box(33, 3.3, -13, 17, 0.08, 0.08, metal); // rail
   for (let k = 0; k < 13; k++) c.body(25.5 + k * 1.25, -13 + (k % 2 ? 0.15 : -0.15), { tag: String(4095 - k) });
   for (let k = 0; k < 8; k++) c.body(26 + k * 1.9, -19.5, { tag: String(4080 - k) });
-  c.prop('WoodenTable_01', 37, 0, -8, 0, 1.2, [1.9, 1.1]); c.decal('pool', 37, 0.93, -8, 1.2); c.decal('pool', 37, 0, -8, 2.6);
-  c.prop('wooden_axe', 36.6, 0.94, -7.9, 1.2); c.prop('sledgehammer_01', 38.5, 0, -6.5, 0.3); c.prop('metal_toolbox', 40.8, 0, -20.5, 0.5);
+  c.prop('WoodenTable_01', 37, 0, -8, 0, 1.2); c.decal('pool', 37, 0.663, -8, 1.2); c.decal('pool', 37, 0, -8, 2.6);
+  c.prop('wooden_axe', 36.6, 0.665, -7.9, 1.2, 1, false, { lie: true }); c.prop('sledgehammer_01', 38.5, 0, -6.5, 0.3, 1, false, { lie: true }); c.prop('metal_toolbox', 40.8, 0, -20.5, 0.5);
   c.prop('Barrel_01', 41, 0, -5.5, 0, 1, [0.6, 0.6]); c.prop('wooden_bucket_01', 35.2, 0, -9.5, 0);
   for (let k = 0; k < 5; k++) c.decal('pool', 26 + k * 3, 0, -13, 1.4 + Math.random());
   c.box(33, -0.04, -16.5, 0.8, 0.05, 0.8, grate); c.decal('smear', 33, 0, -15.5, 2, { rot: 1.5 });
   c.hide('locker', 24.45, -10, -Math.PI / 2); // locker on the west wall, facing in
-  c.box(41.5, 0, -14, 0.8, 1.9, 2.2, metal, { collide: true }); // tool locker
+  // tool locker (hollow, with a shelf; the door is added by the night that opens it)
+  c.box(41.85, 0, -14, 0.1, 1.9, 2.2, metal); c.box(41.5, 0, -15.05, 0.8, 1.9, 0.1, metal); c.box(41.5, 0, -12.95, 0.8, 1.9, 0.1, metal);
+  c.box(41.5, 1.88, -14, 0.8, 0.05, 2.2, metal); c.box(41.5, 0, -14, 0.8, 0.05, 2.2, metal); c.box(41.5, 0.72, -14, 0.75, 0.03, 2.0, metal);
+  c.e.colliders.add(41.1, -15.1, 41.9, -12.9);
   // ===== SMOKEHOUSE ===== x 24..32, z 10..18
   c.floor(24, 10, 32, 18, dirt); c.ceil(24, 10, 32, 18, planks, 2.6);
   c.wallX(24, 32, 10, { h: 2.6, m: planks, gaps: [{ at: 28, w: 1.0 }] }); c.wallX(24, 32, 18, { h: 2.6, m: planks }); c.wallZ(10, 18, 24, { h: 2.6, m: planks }); c.wallZ(10, 18, 32, { h: 2.6, m: planks });
@@ -408,7 +422,7 @@ export function buildCompound(c, opt = {}) {
     c.decal('pool', cx, 0, (front + back) / 2, 1.5); c.cages.push([cx, cz]);
   }
   c.box(-31, 0, 0, 1.6, 0.05, 2, concrete); // landing at the bottom of the stairs
-  c.prop('medical_box', -40, 0, -1, 0.5); c.prop('wooden_stool_01', -38, 0, 1, 0.2); c.prop('vintage_oil_lamp', -40, 0, 1.4, 0);
+  c.prop('medical_box', -40, 0, -1, 0.5); c.prop('wooden_stool_01', -38, 0, 1, 0.2); c.prop('vintage_oil_lamp', -40.6, 0, 1.4, 0);
   c.decal('smear', -44, 0, 0, 3, { rot: 0.2 }); c.decal('words', -51.88, 1.3, 0, 1.3, { wall: Math.PI / 2 });
   c.hide('base1', -33, -8.5, Math.PI);
   // the stairs: the hall door at x=-12 leads down; the landing at x=-30.6 leads up

@@ -140,8 +140,8 @@ const home = {
   atmosphere: { fog: 0x040302, density: 0.11, hemi: 0.05 },
   build(c) {
     buildCompound(c); bulbs(c, [-7, 2.5, -5, 0xffa860, 5, 8], [5, 2.5, -5, 0xff9a50, 4, 9]); sickLight(c, 0);
-    c.key = c.pickup(new THREE.Group().add(new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.008, 6, 12), surf('rusty_metal_02', { size: 0.3, metal: 0.7, rough: 0.4 }))), 5.3, 0.9, -5.6, 'chainkey', 'a key on a bloody string');
-    c.decal('pool', 5.3, 0.885, -5.6, 0.5);
+    c.key = c.pickup(new THREE.Group().add(new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.008, 6, 12), surf('rusty_metal_02', { size: 0.3, metal: 0.7, rough: 0.4 }))), 5.3, c.diningTop + 0.005, -5.6, 'chainkey', 'a key on a bloody string');
+    c.decal('pool', 5.3, c.diningTop, -5.6, 0.5);
     c.note(-11.2, 0.92, -4.4, 0.4, 'SCRATCHED INTO THE METAL', 'If he breathes on you, don\'t move.\nHe checks the cupboard you used last time. He always knows which one.\nShe dances. She only sees what\'s in front of her.\nDon\'t eat breakfast.\n\n- 4,095');
     c.note(9, 0.01, 8.5, 2, 'ON THE BACK OF A RECEIPT', 'They tag us by number. I am 4,091.\nThere is a girl in the basement. Twelve. She was one of us.\nThey are kind to you in the morning. That is the worst part.');
     for (let i = 0; i < 3; i++) c.decal('hand', -2.1, 1 + i * 0.2, -5.8 - i * 0.3, 0.4, { wall: -Math.PI / 2 });
@@ -214,9 +214,9 @@ const morning = {
     c.windowPane(11.88, 1.6, -6, -Math.PI / 2, 1.4, 1.1);
     c.daylight(true); c.flags.day = true;
     // breakfast. it looks like breakfast.
-    c.plate = c.mesh(new THREE.CylinderGeometry(0.16, 0.13, 0.02, 20), new THREE.MeshStandardMaterial({ color: 0xf0ece0, roughness: 0.3 }), 5, 0.89, -3.3);
-    c.eggs = c.mesh(new THREE.SphereGeometry(0.06, 10, 8).scale(1.4, 0.35, 1), new THREE.MeshStandardMaterial({ color: 0xffe9a0, roughness: 0.4 }), 5, 0.91, -3.3);
-    c.meat = c.mesh(new THREE.SphereGeometry(0.1, 10, 8).scale(1.3, 0.5, 1), new THREE.MeshStandardMaterial({ color: 0x5a1008, roughness: 0.25 }), 5, 0.93, -3.3); c.meat.visible = false;
+    c.plate = c.mesh(new THREE.CylinderGeometry(0.16, 0.13, 0.02, 20), new THREE.MeshStandardMaterial({ color: 0xf0ece0, roughness: 0.3 }), 5, c.diningTop + 0.012, -3.3);
+    c.eggs = c.mesh(new THREE.SphereGeometry(0.06, 10, 8).scale(1.4, 0.35, 1), new THREE.MeshStandardMaterial({ color: 0xffe9a0, roughness: 0.4 }), 5, c.diningTop + 0.03, -3.3);
+    c.meat = c.mesh(new THREE.SphereGeometry(0.1, 10, 8).scale(1.3, 0.5, 1), new THREE.MeshStandardMaterial({ color: 0x5a1008, roughness: 0.25 }), 5, c.diningTop + 0.05, -3.3); c.meat.visible = false;
     c.empty = photos(c, 3);
     c.daylight(true);
   },
@@ -295,7 +295,7 @@ const killFloor = {
     c.monitor = c.mesh(new THREE.BoxGeometry(0.12, 0.18, 0.06), new THREE.MeshStandardMaterial({ color: 0xe8e0d0, roughness: 0.4 }), 26, 1.2, 17.6);
     c.newest = c.body(39.5, -13, { tag: '4096' }); c.decal('pool', 39.5, 0, -13, 1.6);
     c.locker = c.mesh(new THREE.BoxGeometry(0.1, 1.6, 1.8), surf('rusty_metal_02', { size: 1.5, metal: 0.5, rough: 0.6 }), 41.06, 0.95, -14);
-    c.cutters = prop('bolt_cutters_01'); c.cutters.position.set(41.3, 0.9, -14); c.add(c.cutters); c.cutters.visible = false;
+    c.cutters = prop('bolt_cutters_01'); c.cutters.rotation.set(-Math.PI / 2, 0.3, 0, 'YXZ'); c.cutters.position.set(41.35, 0, -14); c.add(c.cutters); c.ground(c.cutters, 0.75); c.cutters.visible = false;
     lastDeath(c);
   },
   stages: [
@@ -359,9 +359,9 @@ const supper = {
   atmosphere: { fog: 0x050302, density: 0.1, hemi: 0.05 },
   build(c) {
     buildCompound(c); bulbs(c, [5, 2.2, -5, 0xffb070, 5, 7], [-7, 2.5, -5, 0xff9050, 2.5, 7]); sickLight(c, 0);
-    c.cleaver = c.add(prop('wooden_axe', 0.7)); c.cleaver.position.set(5.35, 0.9, -3.4); c.cleaver.rotation.set(0, 0.4, Math.PI / 2);
-    c.handPad = c.mesh(new THREE.BoxGeometry(0.3, 0.02, 0.2), new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 0.7 }), 4.65, 0.88, -3.25);
-    c.twelveHand = c.mesh(new THREE.BoxGeometry(0.12, 0.03, 0.2), new THREE.MeshStandardMaterial({ color: 0xc0aa98, roughness: 0.6 }), 5, 0.9, -6.3);
+    c.cleaver = c.add(prop('wooden_axe', 0.7)); c.cleaver.rotation.set(-Math.PI / 2, 0.4, 0, 'YXZ'); c.cleaver.position.set(5.35, 0, -3.4); c.ground(c.cleaver, c.diningTop);
+    c.handPad = c.mesh(new THREE.BoxGeometry(0.3, 0.02, 0.2), new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 0.7 }), 4.65, c.diningTop + 0.012, -3.25);
+    c.twelveHand = c.mesh(new THREE.BoxGeometry(0.12, 0.03, 0.2), new THREE.MeshStandardMaterial({ color: 0xc0aa98, roughness: 0.6 }), 5, c.diningTop + 0.016, -6.3);
     c.bkey = c.pickup(new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.008, 6, 12), surf('rusty_metal_02', { size: 0.3, metal: 0.7 })), -10, 0.55, 8.4, 'basementkey', 'a padlock key in her lap');
     c.note(-3, 0.51, 8, 0.3, 'IN A CHILD\'S HANDWRITING', 'GRANMA CANT SEE\nGRANMA HEARS EVRYTHING\nGRANMA LIKES IT WHEN YOU CRY BECAUSE THEN SHE KNOWS WHERE YOU ARE');
     photos(c, 4); lastDeath(c);
@@ -400,14 +400,14 @@ const supper = {
       st.cut = outcome; g.save.write();
       if (outcome === 'did') {
         c.sfx('thud1', 5, 0.9, -6.3, { vol: 1.5 }); c.sfx('c_scream2', 5, 1.4, -7.3, { vol: 1.3 }); c.sfx(['wet1', 'squish7'], 5, 0.9, -6.3, { vol: 1.2 }); c.twelveHand.scale.z = 0.7;
-        g.engine.setFade(0.8, 0x250000); g.after(1.5, () => g.engine.setFade(0)); c.decal('pool', 5, 0.885, -6.3, 0.6);
+        g.engine.setFade(0.8, 0x250000); g.after(1.5, () => g.engine.setFade(0)); c.decal('pool', 5, c.diningTop, -6.3, 0.6);
         await c.sleep(2.5);
         await say(c, 'MOTHER', 'There. There. That wasn\'t so hard. Now you\'re ours.', { pos: M() });
         await say(c, 'FATHER', 'Good.', { pos: h.head.clone() });
         await say(c, 'TWELVE', '...I know. I know they made you. They made me too.', { pos: tw.head, whisper: true });
       } else if (outcome === 'sacrificed') {
         c.sfx('thud1', 4.65, 0.9, -3.25, { vol: 1.6 }); c.sfx(['wet6', 'squish7'], 4.65, 0.9, -3.25, { vol: 1.3 }); g.audio.setDread(1);
-        g.engine.setFade(0.95, 0x300000); g.after(3, () => g.engine.setFade(0)); c.decal('pool', 4.65, 0.885, -3.25, 0.7);
+        g.engine.setFade(0.95, 0x300000); g.after(3, () => g.engine.setFade(0)); c.decal('pool', 4.65, c.diningTop, -3.25, 0.7);
         g.hud.sub('There is no pain for a moment. Then there is nothing else.', 5);
         await c.sleep(4);
         await say(c, 'MOTHER', 'Oh, baby. Oh, you sweet, stupid thing. The last one did that too.', { pos: M() });
@@ -456,7 +456,7 @@ const basement = {
   build(c) {
     buildCompound(c); bulbs(c, [-40, 2.2, 0, 0xffa050, 2.5, 7], [-48, 2.2, 6, 0xff7030, 1.5, 4]); sickLight(c, 0); sickLight(c, 1);
     c.twelve = new Twelve(c, -48, 7.5, 0); c.onUpdate(dt => c.twelve.update(dt));
-    c.crow = c.pickup(prop('crowbar_01'), -39.6, 0.05, -1.4, 'crowbar', 'crowbar');
+    { const cb = prop('crowbar_01'); cb.rotation.set(-Math.PI / 2, 1.1, 0, 'YXZ'); c.crow = c.pickup(cb, -39.6, 0, -1.4, 'crowbar', 'crowbar'); }
     c.tape = c.mesh(new THREE.BoxGeometry(0.22, 0.07, 0.14), new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.5 }), -38, 0.47, 1);
     c.cageDoor = c.mesh(new THREE.BoxGeometry(1.2, 2.2, 0.05), surf('rusty_metal_02', { size: 1, metal: 0.6, rough: 0.5 }), -48, 1.1, 4.4);
     c.cageCol = c.e.colliders.add(-48.6, 4.35, -47.4, 4.45);
